@@ -21,7 +21,7 @@ a:hover { color: var(--rojo); }
 .pagina-inicio .section,
 .pagina-inicio .section.blanca {
   background-color: #f7f1eb;
-  background-image: linear-gradient(rgba(247,241,235,.72), rgba(247,241,235,.72)), url("/escudo-unsch.png");
+  background-image: linear-gradient(rgba(247,241,235,.88), rgba(247,241,235,.88)), url("/escudo-unsch.png");
   background-repeat: repeat;
   background-size: auto, 250px auto;
   background-position: center, center;
@@ -488,6 +488,107 @@ a:hover { color: var(--rojo); }
 .login-tab-activo {
   color: var(--carbon);
   border-bottom-color: var(--dorado);
+}
+
+/* Widget de accesibilidad */
+.accessibility-trigger {
+  position: fixed;
+  left: 24px;
+  bottom: 24px;
+  z-index: 160;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 52px;
+  padding: 0 17px 0 12px;
+  border: 3px solid #fff;
+  border-radius: 999px;
+  background: #1d70f5;
+  color: #fff;
+  box-shadow: 0 8px 22px rgba(11,72,166,.35);
+  cursor: pointer;
+  font: 700 13px/1 var(--font-sans), Arial, sans-serif;
+  letter-spacing: .02em;
+  transition: transform .2s ease, background .2s ease, box-shadow .2s ease;
+}
+.accessibility-trigger:hover { background: #0b58d4; transform: translateY(-3px); box-shadow: 0 12px 28px rgba(11,72,166,.45); }
+.accessibility-trigger svg { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 2.1; stroke-linecap: round; stroke-linejoin: round; }
+.accessibility-trigger svg circle { fill: currentColor; stroke: none; }
+.accessibility-backdrop { position: fixed; z-index: 998; inset: 0; background: rgba(13,17,25,.46); opacity: 0; visibility: hidden; transition: opacity .24s ease, visibility .24s ease; }
+.accessibility-backdrop.is-open { opacity: 1; visibility: visible; }
+.accessibility-panel {
+  position: fixed;
+  z-index: 999;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  width: min(385px, 94vw);
+  height: 100dvh;
+  background: #fff;
+  color: #202833;
+  box-shadow: 12px 0 34px rgba(0,0,0,.28);
+  transform: translateX(-105%);
+  transition: transform .28s cubic-bezier(.2,.8,.2,1);
+  text-align: left !important;
+}
+.accessibility-panel.is-open { transform: translateX(0); }
+.accessibility-panel-header { display: flex; justify-content: space-between; gap: 18px; padding: 28px 24px 22px; background: linear-gradient(135deg, #123d8d, #1d70f5); color: #fff; }
+.accessibility-kicker { font-size: 11px; font-weight: 700; letter-spacing: .12em; opacity: .78; }
+.accessibility-panel-header h2 { margin: 7px 0 0; font-size: 23px; line-height: 1.15; font-weight: 700; }
+.accessibility-close { width: 36px; height: 36px; border: 1px solid rgba(255,255,255,.45); border-radius: 50%; background: transparent; color: #fff; font-size: 27px; line-height: 1; cursor: pointer; }
+.accessibility-panel-body { flex: 1; overflow-y: auto; padding: 20px 24px 28px; }
+.accessibility-language { display: flex; align-items: center; justify-content: space-between; padding: 12px 0 18px; border-bottom: 1px solid #e5e9f0; font-size: 13px; font-weight: 700; color: #4c5766; }
+.accessibility-language div { display: flex; gap: 5px; padding: 3px; border-radius: 8px; background: #edf2fa; }
+.accessibility-language button { min-width: 35px; border: 0; border-radius: 5px; padding: 6px; background: transparent; color: #536174; font-size: 11px; font-weight: 800; cursor: pointer; }
+.accessibility-language button.active { background: #1d70f5; color: #fff; }
+.accessibility-group { padding: 20px 0; border-bottom: 1px solid #e5e9f0; }
+.accessibility-group h3 { margin: 0 0 14px; color: #1d3f7d; font-size: 13px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.font-size-control, .accessibility-toggle { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 43px; }
+.font-size-control { margin-bottom: 9px; color: #3f4b5c; font-size: 14px; font-weight: 600; }
+.font-size-control > div { display: flex; align-items: center; gap: 7px; }
+.font-size-control button { width: 32px; height: 32px; border: 1px solid #bfcbe0; border-radius: 7px; background: #fff; color: #1d70f5; font-size: 22px; font-weight: 700; cursor: pointer; }
+.font-size-control output { min-width: 45px; color: #1d3f7d; font-size: 13px; text-align: center; }
+.accessibility-toggle { border: 0; border-radius: 7px; padding: 0 9px; background: transparent; color: #3f4b5c; font: 600 14px/1.2 var(--font-sans), Arial, sans-serif; text-align: left; cursor: pointer; }
+.accessibility-toggle:hover { background: #f1f5fb; }
+.accessibility-toggle i { position: relative; width: 38px; height: 22px; border-radius: 20px; background: #aab5c4; transition: background .18s ease; }
+.accessibility-toggle i::after { position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; content: ""; transition: transform .18s ease; }
+.accessibility-toggle.active { color: #164baf; }
+.accessibility-toggle.active i { background: #1d70f5; }
+.accessibility-toggle.active i::after { transform: translateX(16px); }
+.accessibility-option-label { margin: 13px 0 8px; color: #627086; font-size: 12px; font-weight: 700; }
+.accessibility-options { display: grid; gap: 7px; }
+.accessibility-options.two { grid-template-columns: repeat(2, 1fr); }
+.accessibility-options.three { grid-template-columns: repeat(3, 1fr); }
+.accessibility-option { min-height: 38px; border: 1px solid #cbd5e4; border-radius: 7px; background: #fff; color: #536174; font: 700 11px/1.1 var(--font-sans), Arial, sans-serif; cursor: pointer; }
+.accessibility-option:hover, .accessibility-option.active { border-color: #1d70f5; background: #eaf2ff; color: #124da9; }
+.accessibility-panel-footer { padding: 17px 24px; border-top: 1px solid #e5e9f0; background: #fafcff; }
+.accessibility-reset { width: 100%; min-height: 44px; border: 1px solid #b8202c; border-radius: 7px; background: #fff; color: #a31522; font: 800 13px/1 var(--font-sans), Arial, sans-serif; cursor: pointer; }
+.accessibility-reset:hover { background: #b8202c; color: #fff; }
+.reading-guide { position: fixed; right: 0; left: 0; z-index: 997; height: 42px; border-top: 2px solid #1d70f5; border-bottom: 2px solid #1d70f5; background: rgba(29,112,245,.09); pointer-events: none; transform: translateY(-21px); }
+
+/* Ajustes aplicados por el widget */
+html.a11y-readable-font body, html.a11y-readable-font body * { font-family: Arial, Helvetica, sans-serif !important; }
+html.a11y-line-spacing .pagina-inicio p, html.a11y-line-spacing .pagina-inicio li, html.a11y-line-spacing .pagina-inicio h1, html.a11y-line-spacing .pagina-inicio h2, html.a11y-line-spacing .pagina-inicio h3 { line-height: 1.85 !important; }
+html.a11y-letter-spacing .pagina-inicio p, html.a11y-letter-spacing .pagina-inicio a, html.a11y-letter-spacing .pagina-inicio h1, html.a11y-letter-spacing .pagina-inicio h2, html.a11y-letter-spacing .pagina-inicio h3 { letter-spacing: .08em !important; }
+html.a11y-large-cursor, html.a11y-large-cursor * { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' stroke='%23fff' stroke-width='1.4' d='M4 2l15 10-7 1 4 7-3 2-4-7-5 5z'/%3E%3C/svg%3E") 3 2, auto !important; }
+html.a11y-highlight-links .pagina-inicio a { outline: 2px solid #f1bb15; outline-offset: 3px; background: #fff6c9; color: #0d3985 !important; text-decoration: underline !important; }
+html.a11y-reduce-motion *, html.a11y-reduce-motion *::before, html.a11y-reduce-motion *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; }
+html.a11y-align-center .pagina-inicio .hero, html.a11y-align-center .pagina-inicio .section, html.a11y-align-center .pagina-inicio .rector-copy { text-align: center; }
+html.a11y-align-center .pagina-inicio .btns { justify-content: center; }
+html.a11y-align-justify .pagina-inicio p { text-align: justify; }
+html.a11y-contrast-light .pagina-inicio { filter: contrast(1.15) brightness(1.05); }
+html.a11y-contrast-high .pagina-inicio { filter: grayscale(1) contrast(1.65); }
+html.a11y-contrast-high body { background: #000; }
+html.a11y-monochrome .pagina-inicio { filter: grayscale(1); }
+
+@media (max-width: 700px) {
+  .accessibility-trigger { left: 14px; bottom: 14px; min-height: 48px; padding-right: 13px; }
+  .accessibility-trigger span { display: none; }
+  .accessibility-trigger svg { width: 27px; height: 27px; }
+  .accessibility-panel-header { padding: 23px 20px 18px; }
+  .accessibility-panel-body { padding-right: 20px; padding-left: 20px; }
+  .accessibility-panel-footer { padding-right: 20px; padding-left: 20px; }
 }
 
 /* ── Banner de bienvenida (dashboard) ─────────────── */

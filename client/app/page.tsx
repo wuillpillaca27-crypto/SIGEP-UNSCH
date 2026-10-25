@@ -1,6 +1,7 @@
 "use client";
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import AccesibilidadWidget from "./components/AccesibilidadWidget";
 
 const accesos = [
   "Estudiantes",
@@ -181,6 +182,7 @@ export default function Home() {
 
       {/* ── Footer ─────────────────────────────────── */}
       <footer className="footer">© UNSCH · Ayacucho, Perú · SIGEP-UNSCH</footer>
+      <AccesibilidadWidget />
     </div>
   );
 }
