@@ -19,11 +19,19 @@ const avisos = [
 
 export default function Home() {
   const [oscuro, setOscuro] = useState(false);
+  const [mostrarVolverArriba, setMostrarVolverArriba] = useState(false);
 
   // Recuperar preferencia guardada
   useEffect(() => {
     const guardado = localStorage.getItem("sigep-tema");
     if (guardado === "oscuro") setOscuro(true);
+  }, []);
+
+  useEffect(() => {
+    const actualizarBoton = () => setMostrarVolverArriba(window.scrollY > 320);
+    window.addEventListener("scroll", actualizarBoton, { passive: true });
+    actualizarBoton();
+    return () => window.removeEventListener("scroll", actualizarBoton);
   }, []);
 
   function toggleTema() {
@@ -102,6 +110,15 @@ export default function Home() {
           <a className="social-link tiktok" href="#" aria-label="TikTok" title="TikTok">♪</a>
           <a className="social-link linkedin" href="#" aria-label="LinkedIn" title="LinkedIn">in</a>
         </aside>
+        <button
+          className={`back-to-top ${mostrarVolverArriba ? "back-to-top-visible" : ""}`}
+          type="button"
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          aria-label="Volver arriba"
+          title="Volver arriba"
+        >
+          ↑
+        </button>
         <div className="btns">
           <a className="btn btn-rojo" href="/login">
             INICIAR SESIÓN
