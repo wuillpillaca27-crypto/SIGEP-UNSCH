@@ -21,7 +21,16 @@ a:hover { color: var(--rojo); }
 .nav a.cta { background: var(--rojo); color: #fff; padding: 14px 24px; }
 .nav a.cta:hover { background: var(--oscuro); }
 
-.hero { background: var(--carbon); padding: 140px 64px 72px; display: flex; flex-direction: column; justify-content: flex-end; }
+.hero {
+  background:
+    linear-gradient(90deg, rgba(46,47,51,.94) 0%, rgba(46,47,51,.78) 50%, rgba(46,47,51,.40) 100%),
+    url("/portada-unsch.png") center 20% / cover no-repeat;
+  padding: 140px 64px 72px;
+  min-height: 520px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
 .hero-tag { font-size: 13px; font-weight: 700; letter-spacing: .1em; color: #e0b83a; }
 .hero h1 { font-weight: 400; font-size: 56px; line-height: 1.1; color: #fff; margin: 16px 0 0; max-width: 760px; }
 .hero-line { width: 40px; height: 3px; background: var(--dorado); margin: 24px 0; }
