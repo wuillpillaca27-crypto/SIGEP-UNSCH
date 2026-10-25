@@ -189,3 +189,75 @@ a:hover { color: var(--rojo); }
 
 /* ── Badge rechazado (faltaba) ─────────────────────── */
 .badge-rechazado { background: #fecaca; color: #7f1d1d; }
+
+/* ══════════════════════════════════════════════════════════════
+   MODO OSCURO — página de inicio
+   Se activa cuando el wrapper tiene la clase .tema-oscuro
+   ══════════════════════════════════════════════════════════════ */
+
+/* Variables del modo oscuro */
+.tema-oscuro {
+  --dm-bg:          #18191c;
+  --dm-superficie:  #23252a;
+  --dm-borde:       #35373d;
+  --dm-texto:       #e8e9ea;
+  --dm-texto-sub:   #9a9ba3;
+  --dm-titulo:      #f1f1f2;
+  background: var(--dm-bg);
+  color: var(--dm-texto);
+}
+
+/* Header */
+.tema-oscuro .header {
+  background: var(--dm-superficie);
+  border-bottom-color: var(--dorado);
+}
+.tema-oscuro .brand-title  { color: #f1f1f2; }
+.tema-oscuro .brand-sub    { color: var(--dm-texto-sub); }
+.tema-oscuro .brand-text   { border-left-color: var(--dm-borde); }
+.tema-oscuro .nav a        { color: #d4d5d9; }
+.tema-oscuro .nav a:hover  { color: var(--dorado); }
+.tema-oscuro .nav a.cta    { background: var(--rojo); color: #fff; }
+.tema-oscuro .nav a.cta:hover { background: var(--dorado); color: var(--oscuro); }
+
+/* Sección EXPLORAR */
+.tema-oscuro .section {
+  background: var(--dm-bg);
+}
+.tema-oscuro .section h2   { color: var(--dm-texto-sub); }
+.tema-oscuro .tile .img    { background: var(--dm-borde); }
+.tema-oscuro .tile .lbl    { background: #2c2d32; color: #d4d5d9; }
+.tema-oscuro .tile:hover .lbl { background: var(--rojo); color: #fff; }
+
+/* Sección AVISOS */
+.tema-oscuro .section.blanca {
+  background: var(--dm-superficie);
+}
+.tema-oscuro .card          { color: var(--dm-texto); }
+.tema-oscuro .card .img     { background: var(--dm-borde); }
+.tema-oscuro .card-title    { color: var(--dm-titulo); }
+.tema-oscuro .card-cat      { color: var(--dorado); }
+.tema-oscuro .card:hover .card-title { color: var(--dorado); }
+
+/* Footer — ya es oscuro, solo ajuste sutil */
+.tema-oscuro .footer {
+  background: #0f1013;
+  border-top: 1px solid var(--dm-borde);
+}
+
+/* ── Botón toggle tema ────────────────────────────── */
+.toggle-tema {
+  background: none;
+  border: 1.5px solid #c9c9cc;
+  border-radius: 6px;
+  font-size: 17px;
+  line-height: 1;
+  padding: 6px 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: border-color .2s, background .2s;
+}
+.toggle-tema:hover { border-color: var(--dorado); background: rgba(201,162,39,.12); }
+.tema-oscuro .toggle-tema { border-color: var(--dm-borde); }
+.tema-oscuro .toggle-tema:hover { border-color: var(--dorado); }
