@@ -18,7 +18,14 @@ a:hover { color: var(--rojo); }
   background-size: auto, 250px auto;
   background-position: center, center;
 }
-.pagina-inicio .section.blanca { background-color: rgba(255,255,255,.86); }
+.pagina-inicio .section,
+.pagina-inicio .section.blanca {
+  background-color: #f7f1eb;
+  background-image: linear-gradient(rgba(247,241,235,.72), rgba(247,241,235,.72)), url("/escudo-unsch.png");
+  background-repeat: repeat;
+  background-size: auto, 250px auto;
+  background-position: center, center;
+}
 .pagina-inicio .hero { background-color: var(--oscuro); }
 .tema-oscuro.pagina-inicio { background-image: linear-gradient(rgba(24,25,28,.92), rgba(24,25,28,.92)), url("/escudo-unsch.png"); }
 
@@ -55,7 +62,7 @@ a:hover { color: var(--rojo); }
   z-index: 0;
   inset: 0;
   content: "";
-  background: linear-gradient(90deg, rgba(46,47,51,.94) 0%, rgba(46,47,51,.78) 50%, rgba(46,47,51,.38) 100%);
+  background: linear-gradient(90deg, rgba(24,12,14,.94) 0%, rgba(83,25,29,.82) 48%, rgba(132,48,45,.58) 72%, rgba(132,48,45,.28) 100%);
 }
 .hero > * { position: relative; z-index: 1; }
 @keyframes hero-acercamiento {
@@ -164,7 +171,7 @@ a:hover { color: var(--rojo); }
   justify-content: space-between;
   min-height: 360px;
   overflow: hidden;
-  background: linear-gradient(105deg, rgba(46,47,51,.98) 0%, rgba(63,64,68,.94) 62%, rgba(46,47,51,.78) 100%);
+  background: linear-gradient(105deg, rgba(30,13,16,.98) 0%, rgba(83,25,29,.94) 60%, rgba(132,48,45,.72) 100%);
   border-left: 5px solid var(--dorado);
   box-shadow: 0 8px 24px rgba(0,0,0,.16);
 }
