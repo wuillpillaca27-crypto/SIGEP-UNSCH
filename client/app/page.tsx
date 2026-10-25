@@ -43,7 +43,7 @@ export default function Home() {
   }
 
   return (
-    <div className={oscuro ? "tema-oscuro" : ""}>
+    <div className={`pagina-inicio ${oscuro ? "tema-oscuro" : ""}`}>
       {/* ── Header ─────────────────────────────────── */}
       <header className="header">
         <div className="brand">
@@ -130,6 +130,27 @@ export default function Home() {
       </section>
 
       {/* ── Explorar ───────────────────────────────── */}
+      <section className="rector-section" aria-labelledby="rector-title">
+        <div className="rector-content">
+          <div className="rector-copy">
+            <div className="rector-eyebrow">AUTORIDADES UNIVERSITARIAS</div>
+            <h2 id="rector-title" className="serif">Dr. Emilio Ramírez Roca</h2>
+            <div className="rector-role">RECTOR</div>
+            <p>
+              Comprometidos con una gestión cercana, transparente y orientada
+              al desarrollo académico de nuestra comunidad universitaria.
+            </p>
+          </div>
+          <Image
+            className="rector-photo"
+            src="/rector-emilio-ramirez-roca-sin-fondo.png"
+            alt="Dr. Emilio Ramírez Roca, Rector de la Universidad Nacional de San Cristóbal de Huamanga"
+            width={360}
+            height={610}
+          />
+        </div>
+      </section>
+
       <section className="section">
         <h2>EXPLORAR</h2>
         <div className="tiles">
