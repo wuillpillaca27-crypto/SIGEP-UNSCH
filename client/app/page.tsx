@@ -95,6 +95,13 @@ export default function Home() {
           Inicie, siga y consulte el estado de sus solicitudes con sus
           credenciales institucionales.
         </p>
+        <aside className="social-bar" aria-label="Redes sociales">
+          <a className="social-link facebook" href="#" aria-label="Facebook" title="Facebook">f</a>
+          <a className="social-link youtube" href="#" aria-label="YouTube" title="YouTube">▶</a>
+          <a className="social-link instagram" href="#" aria-label="Instagram" title="Instagram">◎</a>
+          <a className="social-link tiktok" href="#" aria-label="TikTok" title="TikTok">♪</a>
+          <a className="social-link linkedin" href="#" aria-label="LinkedIn" title="LinkedIn">in</a>
+        </aside>
         <div className="btns">
           <a className="btn btn-rojo" href="/login">
             INICIAR SESIÓN
