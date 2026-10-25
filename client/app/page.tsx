@@ -77,6 +77,15 @@ export default function Home() {
 
       {/* ── Hero ───────────────────────────────────── */}
       <section className="hero">
+        <div className="hero-institution" aria-label="Escuela de Posgrado">
+          <Image
+            src="/escudo-unsch.png"
+            alt="Escudo de la UNSCH"
+            width={92}
+            height={120}
+          />
+          <span>ESCUELA DE<br /><strong>POSGRADO</strong></span>
+        </div>
         <div className="hero-tag">SISTEMA INSTITUCIONAL</div>
         <h1 className="serif">
           Gestión de procesos académicos y administrativos
