@@ -11,7 +11,7 @@ a { color: var(--carbon); }
 a:hover { color: var(--rojo); }
 .serif { font-family: var(--font-serif), Georgia, serif; }
 
-.header { background: #fff; padding: 18px 64px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; border-bottom: 4px solid var(--dorado); }
+.header { background: #fff; padding: 18px 64px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; border-bottom: 4px solid var(--dorado); position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 12px rgba(0,0,0,.08); }
 .brand { display: flex; align-items: center; gap: 18px; }
 .brand-text { border-left: 1px solid #c9c9cc; padding-left: 18px; }
 .brand-title { font-size: 40px; color: var(--carbon); line-height: 1; }
@@ -214,6 +214,7 @@ a:hover { color: var(--rojo); }
 .tema-oscuro .header {
   background: var(--dm-superficie);
   border-bottom-color: var(--dorado);
+  box-shadow: 0 2px 12px rgba(0,0,0,.28);
 }
 .tema-oscuro .brand-title  { color: #f1f1f2; }
 .tema-oscuro .brand-sub    { color: var(--dm-texto-sub); }
@@ -325,4 +326,35 @@ a:hover { color: var(--rojo); }
 .login-tab-activo {
   color: var(--carbon);
   border-bottom-color: var(--dorado);
+}
+
+/* ── Banner de bienvenida (dashboard) ─────────────── */
+.bienvenida-banner {
+  background: linear-gradient(90deg, var(--oscuro) 0%, var(--carbon) 100%);
+  border-left: 5px solid var(--dorado);
+  padding: 18px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: opacity .35s ease, transform .35s ease;
+}
+.bienvenida-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.bienvenida-saludo {
+  font-size: 20px;
+  color: #fff;
+  font-weight: 400;
+}
+.bienvenida-saludo strong {
+  color: var(--dorado);
+  font-weight: 700;
+}
+.bienvenida-sub {
+  font-size: 13px;
+  color: #a0a1a8;
+  letter-spacing: .04em;
 }

@@ -1,16 +1,19 @@
+"use client";
+import { useEffect, useState } from "react";
+
 const stats = [
-  { label: "Estudiantes activos", value: "[000]" },
-  { label: "Expedientes en trámite", value: "[000]" },
+  { label: "Estudiantes activos",        value: "[000]" },
+  { label: "Expedientes en trámite",     value: "[000]" },
   { label: "Grados y títulos pendientes", value: "[000]" },
 ];
 
 const statVerificado = { label: "Diplomas verificados", value: "[000]" };
 
 const expedientes = [
-  { nombre: "[Apellidos y nombres]", programa: "[Programa]", estado: "En revisión", estadoClass: "badge-revision" },
-  { nombre: "[Apellidos y nombres]", programa: "[Programa]", estado: "Observado", estadoClass: "badge-observado" },
-  { nombre: "[Apellidos y nombres]", programa: "[Programa]", estado: "Aprobado", estadoClass: "badge-aprobado" },
-  { nombre: "[Apellidos y nombres]", programa: "[Programa]", estado: "En revisión", estadoClass: "badge-revision" },
+  { nombre: "[Apellidos y nombres]", programa: "[Programa]", estado: "En revisión", estadoClass: "badge-revision"  },
+  { nombre: "[Apellidos y nombres]", programa: "[Programa]", estado: "Observado",   estadoClass: "badge-observado" },
+  { nombre: "[Apellidos y nombres]", programa: "[Programa]", estado: "Aprobado",    estadoClass: "badge-aprobado"  },
+  { nombre: "[Apellidos y nombres]", programa: "[Programa]", estado: "En revisión", estadoClass: "badge-revision"  },
 ];
 
 const auditoria = [
@@ -21,19 +24,65 @@ const auditoria = [
 ];
 
 const accesosRapidos = [
-  { label: "Nuevo expediente", href: "/admin/expedientes" },
-  { label: "Validar requisitos", href: "/admin/validacion-requisitos" },
-  { label: "Verificar diploma QR", href: "/admin/verificacion-qr" },
-  { label: "Exportar a SUNEDU", href: "/admin/exportacion-sunedu" },
+  { label: "Nuevo expediente",    href: "/admin/expedientes"           },
+  { label: "Validar requisitos",  href: "/admin/validacion-requisitos" },
+  { label: "Verificar diploma QR", href: "/admin/verificacion-qr"     },
+  { label: "Exportar a SUNEDU",   href: "/admin/exportacion-sunedu"   },
 ];
 
+// Saludo según la hora del día
+function saludo(): string {
+  const h = new Date().getHours();
+  if (h < 12) return "Buenos días";
+  if (h < 19) return "Buenas tardes";
+  return "Buenas noches";
+}
+
 export default function AdminDashboard() {
+  const [nombreUsuario, setNombreUsuario] = useState<string | null>(null);
+  const [bienvenidaVisible, setBienvenidaVisible] = useState(false);
+
+  useEffect(() => {
+    // Leer usuario guardado al hacer login
+    const raw = localStorage.getItem("sigep-usuario");
+    if (raw) {
+      try {
+        const u = JSON.parse(raw);
+        setNombreUsuario(u.nombre ?? null);
+      } catch { /* ignorar */ }
+    }
+
+    // Mostrar la bienvenida con animación suave
+    const t = setTimeout(() => setBienvenidaVisible(true), 60);
+    return () => clearTimeout(t);
+  }, []);
+
   return (
     <div className="content">
-      <div className="eyebrow">PANEL PRINCIPAL</div>
+
+      {/* ── Bienvenida ───────────────────────────────── */}
+      {nombreUsuario && (
+        <div
+          className={`bienvenida-banner${bienvenidaVisible ? " bienvenida-visible" : ""}`}
+          role="status"
+          aria-live="polite"
+        >
+          <div className="bienvenida-saludo">
+            {saludo()}, <strong>{nombreUsuario}</strong> 👋
+          </div>
+          <div className="bienvenida-sub">
+            Bienvenido al panel de administración · SIGEP-UNSCH
+          </div>
+        </div>
+      )}
+
+      {/* ── Encabezado ───────────────────────────────── */}
+      <div className="eyebrow" style={{ marginTop: nombreUsuario ? 24 : 0 }}>
+        PANEL PRINCIPAL
+      </div>
       <h1 className="serif">Resumen de la Escuela de Posgrado</h1>
 
-      {/* Stats principales */}
+      {/* ── Stats principales ────────────────────────── */}
       <div className="stats-row">
         {stats.map((s) => (
           <div key={s.label} className="stat-card">
@@ -43,7 +92,7 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      {/* Stat diplomas verificados */}
+      {/* ── Stat diplomas verificados ────────────────── */}
       <div className="stats-row" style={{ marginTop: 0 }}>
         <div className="stat-card">
           <div className="stat-label">{statVerificado.label}</div>
@@ -51,9 +100,8 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Tabla expedientes + actividad reciente */}
+      {/* ── Tabla expedientes + actividad reciente ───── */}
       <div className="dashboard-cols">
-        {/* Expedientes recientes */}
         <div className="dash-panel">
           <div className="dash-panel-title">EXPEDIENTES RECIENTES</div>
           <table className="exp-table" aria-label="Expedientes recientes">
@@ -69,16 +117,13 @@ export default function AdminDashboard() {
                 <tr key={i}>
                   <td>{e.nombre}</td>
                   <td>{e.programa}</td>
-                  <td>
-                    <span className={`badge ${e.estadoClass}`}>{e.estado}</span>
-                  </td>
+                  <td><span className={`badge ${e.estadoClass}`}>{e.estado}</span></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
 
-        {/* Actividad reciente / Auditoría */}
         <div className="dash-panel">
           <div className="dash-panel-title">ACTIVIDAD RECIENTE · AUDITORÍA</div>
           <ul className="audit-list">
@@ -93,7 +138,7 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Accesos rápidos */}
+      {/* ── Accesos rápidos ──────────────────────────── */}
       <div className="accesos-section">
         <div className="dash-panel-title">ACCESOS RÁPIDOS</div>
         <div className="accesos-row">
