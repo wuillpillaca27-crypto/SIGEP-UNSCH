@@ -1,15 +1,16 @@
-"use client";
+﻿"use client";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import AccesibilidadWidget from "./components/AccesibilidadWidget";
+import NavbarPublica from "./components/NavbarPublica";
 
 const accesos = [
-  "Estudiantes",
-  "Docentes",
-  "Administradores",
-  "Nueva solicitud",
-  "Seguimiento",
-  "Reportes y auditoría",
+  { label: "Estudiantes",          href: "/mis-tramites" },
+  { label: "Docentes",             href: "/mis-tramites" },
+  { label: "Administradores",      href: "/login" },
+  { label: "Nueva solicitud",      href: "/mis-tramites/nueva-solicitud" },
+  { label: "Seguimiento",          href: "/mis-tramites/expedientes" },
+  { label: "Reportes y auditoría", href: "/login" },
 ];
 
 const avisos = [
@@ -22,7 +23,6 @@ export default function Home() {
   const [oscuro, setOscuro] = useState(false);
   const [mostrarVolverArriba, setMostrarVolverArriba] = useState(false);
 
-  // Recuperar preferencia guardada
   useEffect(() => {
     const guardado = localStorage.getItem("sigep-tema");
     if (guardado === "oscuro") setOscuro(true);
@@ -45,44 +45,9 @@ export default function Home() {
 
   return (
     <div className={`pagina-inicio ${oscuro ? "tema-oscuro" : ""}`}>
-      {/* ── Header ─────────────────────────────────── */}
-      <header className="header">
-        <div className="brand">
-          <Image
-            src="/escudo-unsch.png"
-            alt="Escudo de la UNSCH"
-            width={64}
-            height={84}
-            priority
-          />
-          <div className="brand-text">
-            <div className="brand-title serif">SIGEP</div>
-            <div className="brand-sub">
-              UNIVERSIDAD NACIONAL DE SAN CRISTÓBAL DE HUAMANGA
-            </div>
-          </div>
-        </div>
 
-        <nav className="nav">
-          <a href="#">TRÁMITES</a>
-          <a href="#">SOLICITUDES</a>
-          <a href="#">SEGUIMIENTO</a>
-          <a href="#">REPORTES</a>
-          <a href="#">AYUDA</a>
-
-          {/* Toggle modo oscuro */}
-          <button
-            className="toggle-tema"
-            onClick={toggleTema}
-            aria-label={oscuro ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
-            title={oscuro ? "Modo claro" : "Modo oscuro"}
-          >
-            {oscuro ? "☀" : "🌙"}
-          </button>
-
-          <a href="/login" className="cta">INGRESAR</a>
-        </nav>
-      </header>
+      {/* ── Header con nueva navbar ─────────────────── */}
+      <NavbarPublica oscuro={oscuro} onToggleTema={toggleTema} />
 
       {/* ── Hero ───────────────────────────────────── */}
       <section className="hero">
@@ -105,11 +70,11 @@ export default function Home() {
           credenciales institucionales.
         </p>
         <aside className="social-bar" aria-label="Redes sociales">
-          <a className="social-link facebook" href="#" aria-label="Facebook" title="Facebook">f</a>
-          <a className="social-link youtube" href="#" aria-label="YouTube" title="YouTube">▶</a>
-          <a className="social-link instagram" href="#" aria-label="Instagram" title="Instagram">◎</a>
-          <a className="social-link tiktok" href="#" aria-label="TikTok" title="TikTok">♪</a>
-          <a className="social-link linkedin" href="#" aria-label="LinkedIn" title="LinkedIn">in</a>
+          <a className="social-link facebook"   href="#" aria-label="Facebook"  title="Facebook">f</a>
+          <a className="social-link youtube"    href="#" aria-label="YouTube"   title="YouTube">▶</a>
+          <a className="social-link instagram"  href="#" aria-label="Instagram" title="Instagram">◎</a>
+          <a className="social-link tiktok"     href="#" aria-label="TikTok"    title="TikTok">♪</a>
+          <a className="social-link linkedin"   href="#" aria-label="LinkedIn"  title="LinkedIn">in</a>
         </aside>
         <button
           className={`back-to-top ${mostrarVolverArriba ? "back-to-top-visible" : ""}`}
@@ -121,16 +86,12 @@ export default function Home() {
           ↑
         </button>
         <div className="btns">
-          <a className="btn btn-rojo" href="/login">
-            INICIAR SESIÓN
-          </a>
-          <a className="btn btn-borde" href="#">
-            CONSULTAR MI TRÁMITE
-          </a>
+          <a className="btn btn-rojo" href="/login">INICIAR SESIÓN</a>
+          <a className="btn btn-borde" href="/verificar-documento">CONSULTAR MI TRÁMITE</a>
         </div>
       </section>
 
-      {/* ── Explorar ───────────────────────────────── */}
+      {/* ── Rector ─────────────────────────────────── */}
       <section className="rector-section" aria-labelledby="rector-title">
         <div className="rector-content">
           <div className="rector-copy">
@@ -152,13 +113,14 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── Explorar ───────────────────────────────── */}
       <section className="section">
         <h2>EXPLORAR</h2>
         <div className="tiles">
-          {accesos.map((nombre) => (
-            <a key={nombre} className="tile" href="#">
+          {accesos.map((acc) => (
+            <a key={acc.label} className="tile" href={acc.href}>
               <div className="img" />
-              <div className="lbl">{nombre}</div>
+              <div className="lbl">{acc.label}</div>
             </a>
           ))}
         </div>
