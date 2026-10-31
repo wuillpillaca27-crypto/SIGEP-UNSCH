@@ -621,3 +621,120 @@ html.a11y-monochrome .pagina-inicio { filter: grayscale(1); }
   color: #a0a1a8;
   letter-spacing: .04em;
 }
+
+/* ── Olvidaste tu contraseña ───────────────────────── */
+.login-olvidaste {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-top: 10px;
+  align-self: flex-end;
+  font: inherit;
+  font-size: 13px;
+  color: #718096;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.login-olvidaste:hover { color: var(--rojo); }
+
+/* ── Separador OR ──────────────────────────────────── */
+.login-separador {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 22px 0;
+}
+.login-separador-linea {
+  flex: 1;
+  height: 1px;
+  background: #e2e8f0;
+}
+.login-separador-icono {
+  font-size: 18px;
+  color: #9a9aa0;
+  line-height: 1;
+  user-select: none;
+}
+
+/* ── Botón Google ──────────────────────────────────── */
+.btn-google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  padding: 13px 20px;
+  background: #fff;
+  border: 1.5px solid #dadce0;
+  border-radius: 4px;
+  font: 600 15px/1 inherit;
+  color: #3c4043;
+  cursor: pointer;
+  transition: background .18s ease, box-shadow .18s ease, border-color .18s ease;
+  letter-spacing: .01em;
+}
+.btn-google:hover:not(:disabled) {
+  background: #f8f9fa;
+  border-color: #c6c8ca;
+  box-shadow: 0 1px 4px rgba(0,0,0,.12);
+}
+.btn-google:disabled {
+  opacity: .72;
+  cursor: default;
+}
+.btn-google-cargando {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.btn-google-spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #e2e8f0;
+  border-top-color: #4285F4;
+  border-radius: 50%;
+  animation: girar .7s linear infinite;
+  flex-shrink: 0;
+}
+
+/* ── Modal recuperar contraseña ────────────────────── */
+.login-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0,0,0,.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.login-modal {
+  background: #fff;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.22);
+}
+.login-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 3px solid var(--dorado);
+}
+.login-modal-titulo {
+  font-size: 20px;
+  font-weight: 400;
+  color: var(--carbon);
+  margin: 0;
+}
+.login-modal-body {
+  padding: 24px;
+}
+.login-modal-desc {
+  font-size: 14px;
+  color: #718096;
+  margin: 0 0 18px;
+  line-height: 1.55;
+}
