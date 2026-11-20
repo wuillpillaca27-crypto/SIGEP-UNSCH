@@ -1,0 +1,313 @@
+// ─────────────────────────────────────────────────────────────
+//  SIGEP-UNSCH — Esquema Prisma
+//  Base de datos: PostgreSQL (SQLite para desarrollo local)
+// ─────────────────────────────────────────────────────────────
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ══════════════════════════════════════════════════════════════
+//  USUARIOS Y ROLES
+// ══════════════════════════════════════════════════════════════
+
+model Usuario {
+  id          Int       @id @default(autoincrement())
+  nombres     String
+  apellidos   String
+  dni         String    @unique
+  email       String    @unique
+  password    String
+  rol         Rol       @default(estudiante)
+  activo      Boolean   @default(true)
+  creadoEn    DateTime  @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  // Relaciones
+  estudiante    Estudiante?
+  solicitudes   Solicitud[]   @relation("SolicitudEstudiante")
+  revisiones    Revision[]    @relation("RevisionRevisor")
+  auditorias    Auditoria[]
+  validaciones  ValidacionRequisito[] @relation("ValidacionResponsable")
+  documentosSubidos DocumentoSolicitud[] @relation("DocumentoSubidoPor")
+
+  @@map("usuarios")
+}
+
+enum Rol {
+  administrador
+  operador
+  docente
+  estudiante
+}
+
+// ══════════════════════════════════════════════════════════════
+//  PROGRAMAS ACADÉMICOS
+// ══════════════════════════════════════════════════════════════
+
+model Programa {
+  id        Int          @id @default(autoincrement())
+  nombre    String
+  tipo      TipoPrograma
+  facultad  String
+  activo    Boolean      @default(true)
+  creadoEn  DateTime     @default(now())
+
+  estudiantes Estudiante[]
+  solicitudes Solicitud[]
+  plantillasRequisito PlantillaRequisito[]
+
+  @@map("programas")
+}
+
+enum TipoPrograma {
+  maestria
+  doctorado
+  segunda_especialidad
+  diplomado
+  certificacion_modulos
+}
+
+// ══════════════════════════════════════════════════════════════
+//  ESTUDIANTES
+// ══════════════════════════════════════════════════════════════
+
+model Estudiante {
+  id           Int       @id @default(autoincrement())
+  usuarioId    Int       @unique
+  codigoUniv   String    @unique
+  programaId   Int
+  telefono     String?
+  estadoAcad   EstadoAcademico @default(activo)
+  creditosAprobados Int  @default(0)
+  promedioGeneral   Float @default(0)
+  creadoEn     DateTime  @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  usuario    Usuario   @relation(fields: [usuarioId], references: [id])
+  programa   Programa  @relation(fields: [programaId], references: [id])
+  solicitudes Solicitud[]
+
+  @@map("estudiantes")
+}
+
+enum EstadoAcademico {
+  activo
+  egresado
+  graduado
+  suspendido
+  retirado
+}
+
+// ══════════════════════════════════════════════════════════════
+//  REQUISITOS (motor de validación reutilizable)
+// ══════════════════════════════════════════════════════════════
+
+model PlantillaRequisito {
+  id           Int          @id @default(autoincrement())
+  programaId   Int
+  tipoTramite  TipoTramite
+  codigo       String       @unique
+  nombre       String
+  descripcion  String
+  tipo         TipoRequisito
+  obligatorio  Boolean      @default(true)
+  orden        Int          @default(0)
+  activo       Boolean      @default(true)
+  versionNorm  String       @default("1.0")
+  creadoEn     DateTime     @default(now())
+
+  programa   Programa   @relation(fields: [programaId], references: [id])
+  validaciones ValidacionRequisito[]
+
+  @@map("plantillas_requisito")
+}
+
+enum TipoTramite {
+  grado_maestro
+  grado_doctor
+  titulo_segunda_especialidad
+  certificado_diplomado
+  certificacion_modulos
+}
+
+enum TipoRequisito {
+  academico
+  documental
+  pago
+  idioma
+  otro
+}
+
+// ══════════════════════════════════════════════════════════════
+//  SOLICITUDES Y EXPEDIENTES
+// ══════════════════════════════════════════════════════════════
+
+model Solicitud {
+  id             Int           @id @default(autoincrement())
+  codigo         String        @unique
+  estudianteId   Int
+  usuarioId      Int
+  programaId     Int
+  tipoTramite    TipoTramite
+  estado         EstadoSolicitud @default(borrador)
+  observaciones  String?
+  creadoEn       DateTime      @default(now())
+  actualizadoEn  DateTime      @updatedAt
+  presentadoEn   DateTime?
+  aprobadoEn     DateTime?
+
+  estudiante  Estudiante  @relation(fields: [estudianteId], references: [id])
+  usuario     Usuario     @relation("SolicitudEstudiante", fields: [usuarioId], references: [id])
+  programa    Programa    @relation(fields: [programaId], references: [id])
+
+  documentos    DocumentoSolicitud[]
+  revisiones    Revision[]
+  validaciones  ValidacionRequisito[]
+  historial     HistorialEstado[]
+  auditorias    Auditoria[]
+
+  @@map("solicitudes")
+}
+
+enum EstadoSolicitud {
+  borrador
+  presentado
+  en_revision
+  observado
+  validado
+  pendiente_aprobacion
+  aprobado
+  en_emision
+  emitido
+  rechazado
+  desistido
+  anulado
+}
+
+// ══════════════════════════════════════════════════════════════
+//  VALIDACIONES DE REQUISITOS
+// ══════════════════════════════════════════════════════════════
+
+model ValidacionRequisito {
+  id               Int        @id @default(autoincrement())
+  solicitudId      Int
+  plantillaId      Int
+  estado           EstadoValidacion @default(pendiente)
+  evidencia        String?
+  observacion      String?
+  validadoPor      Int?
+  validadoEn       DateTime?
+  creadoEn         DateTime   @default(now())
+  actualizadoEn    DateTime   @updatedAt
+
+  solicitud  Solicitud          @relation(fields: [solicitudId], references: [id])
+  plantilla  PlantillaRequisito @relation(fields: [plantillaId], references: [id])
+  responsable Usuario?          @relation("ValidacionResponsable", fields: [validadoPor], references: [id])
+
+  @@map("validaciones_requisito")
+}
+
+enum EstadoValidacion {
+  cumplido
+  pendiente
+  observado
+  en_revision
+  no_aplica
+}
+
+// ══════════════════════════════════════════════════════════════
+//  DOCUMENTOS
+// ══════════════════════════════════════════════════════════════
+
+model DocumentoSolicitud {
+  id           Int      @id @default(autoincrement())
+  solicitudId  Int
+  nombre       String
+  tipoDoc      String
+  nombreArchivo String
+  rutaArchivo  String   // Ruta interna, NUNCA pública
+  mimeType     String
+  tamanoBytes  Int
+  subidoPor    Int
+  creadoEn     DateTime @default(now())
+  reemplazadoPor Int?
+
+  solicitud  Solicitud @relation(fields: [solicitudId], references: [id])
+  subidoByUser Usuario @relation("DocumentoSubidoPor", fields: [subidoPor], references: [id])
+
+  @@map("documentos_solicitud")
+}
+
+// ══════════════════════════════════════════════════════════════
+//  REVISIONES ADMINISTRATIVAS
+// ══════════════════════════════════════════════════════════════
+
+model Revision {
+  id           Int      @id @default(autoincrement())
+  solicitudId  Int
+  revisorId    Int
+  accion       AccionRevision
+  comentario   String?
+  estadoAntes  EstadoSolicitud
+  estadoDespues EstadoSolicitud
+  creadoEn     DateTime @default(now())
+
+  solicitud Solicitud @relation(fields: [solicitudId], references: [id])
+  revisor   Usuario   @relation("RevisionRevisor", fields: [revisorId], references: [id])
+
+  @@map("revisiones")
+}
+
+enum AccionRevision {
+  presentar
+  iniciar_revision
+  observar
+  validar
+  aprobar
+  rechazar
+  solicitar_subsanacion
+  subsanar
+  emitir
+  anular
+}
+
+// ══════════════════════════════════════════════════════════════
+//  HISTORIAL DE ESTADOS
+// ══════════════════════════════════════════════════════════════
+
+model HistorialEstado {
+  id           Int             @id @default(autoincrement())
+  solicitudId  Int
+  estadoAntes  EstadoSolicitud?
+  estadoDespues EstadoSolicitud
+  motivo       String?
+  creadoEn     DateTime        @default(now())
+
+  solicitud Solicitud @relation(fields: [solicitudId], references: [id])
+
+  @@map("historial_estados")
+}
+
+// ══════════════════════════════════════════════════════════════
+//  AUDITORÍA
+// ══════════════════════════════════════════════════════════════
+
+model Auditoria {
+  id          Int      @id @default(autoincrement())
+  usuarioId   Int
+  accion      String
+  entidad     String
+  entidadId   Int
+  detalles    String?
+  ip          String?
+  creadoEn    DateTime @default(now())
+
+  usuario Usuario    @relation(fields: [usuarioId], references: [id])
+  solicitud Solicitud? @relation(fields: [entidadId], references: [id])
+
+  @@map("auditoria")
+}

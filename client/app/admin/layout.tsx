@@ -12,6 +12,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [perfil, setPerfil] = useState<Perfil>();
   const [error, setError] = useState("");
   const [intento, setIntento] = useState(0);
+  const [cerrando, setCerrando] = useState(false);
   useEffect(() => {
     let vigente = true;
     solicitudes.perfil().then((respuesta) => {
@@ -46,15 +47,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className="topbar-user">
             <span>{perfil.nombres} {perfil.apellidos}</span>
             <span className="topbar-role">{perfil.rol === "administrador" ? "Administrador" : "Operador"}</span>
-            <button type="button" className="topbar-logout" onClick={() => {
-              localStorage.removeItem("token");
-              localStorage.removeItem("sigep-token");
-              localStorage.removeItem("sigep-usuario");
-              setPerfil(undefined);
-              window.location.replace("/login");
+            <button type="button" className="topbar-logout" disabled={cerrando} onClick={async () => {
+              setCerrando(true);
+              const respuesta = await solicitudes.cerrarSesion();
+              if (respuesta.ok) window.location.replace("/login");
+              else {
+                setError(respuesta.error ?? "No se pudo cerrar la sesión.");
+                setCerrando(false);
+              }
             }}>Cerrar sesión</button>
           </div>
         </div>
+        {error && <p role="alert">{error}</p>}
         {children}
       </div>
     </div></PerfilAdministrativo.Provider>

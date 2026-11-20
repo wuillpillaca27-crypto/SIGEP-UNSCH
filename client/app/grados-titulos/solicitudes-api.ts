@@ -5,6 +5,7 @@ import { API_URL } from "../lib/constants";
 
 export type Perfil = {
   nombres: string; apellidos: string; dni: string; email: string;
+  rol: string;
   estudiante: { codigoUniv: string; programa: { id: number; nombre: string; tipo: string } } | null;
 };
 export type Solicitud = {
@@ -19,10 +20,11 @@ export type Solicitud = {
 };
 
 export const solicitudes = {
-  ingresar: (identificador: string, password: string) => api.post<{ token: string; usuario: Perfil }>("/auth/login", {
+  ingresar: (identificador: string, password: string) => api.post<{ usuario: Perfil }>("/auth/login", {
     ...(/^\d{8}$/.test(identificador) ? { dni: identificador } : { email: identificador }), password,
   }),
   perfil: () => api.get<Perfil>("/auth/perfil"),
+  cerrarSesion: () => api.post<{ ok: boolean }>("/auth/logout", {}),
   listar: () => api.get<Solicitud[]>("/solicitudes"),
   crear: (tipoTramite: string) => api.post<Solicitud>("/solicitudes", { tipoTramite }),
   presentar: (id: number) => api.post<Solicitud>(`/solicitudes/${id}/presentar`, {}),
@@ -30,10 +32,9 @@ export const solicitudes = {
 };
 
 function archivo(id: number, idArchivo: number, opciones?: RequestInit) {
-  const token = localStorage.getItem("token");
   return fetch(`${API_URL}/solicitudes/${id}/documentos/${idArchivo}`, {
     ...opciones,
-    headers: { ...opciones?.headers, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    credentials: "same-origin",
   });
 }
 
@@ -47,9 +48,8 @@ export async function cargarDocumento(id: number, requisito: number, pdf: File):
 }
 
 export async function descargarDocumento(id: number, documento: number, revision = false, visualizar = false) {
-  const token = localStorage.getItem("token");
   const respuesta = revision
-    ? await fetch(`${API_URL}/revision-grados/${id}/documentos/${documento}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+    ? await fetch(`${API_URL}/revision-grados/${id}/documentos/${documento}`, { credentials: "same-origin" })
     : await archivo(id, documento);
   if (!respuesta.ok) throw new Error("No se pudo abrir el documento.");
   const url = URL.createObjectURL(await respuesta.blob());

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
-import { esTramite, tramites, type Tramite } from "./tramites";
+import { certificaciones, esCertificacion, esTramite, tramites, tramitesAcademicos, type TramiteAcademico } from "./tramites";
 import styles from "./orientacion.module.css";
 
 type Programa = { id: number; nombre: string };
@@ -33,11 +33,14 @@ export function SelloPosgrado() {
   </div>;
 }
 
-export default function Orientacion({ inicial }: { inicial?: Tramite }) {
-  const [seleccion, setSeleccion] = useState<Tramite>("maestro");
+export default function Orientacion({ inicial, seccion, programasDestacados }: { inicial?: TramiteAcademico; seccion?: "certificaciones"; programasDestacados?: boolean }) {
+  const esCert = seccion === "certificaciones";
+  const opcionesTramite = esCert ? certificaciones : tramites;
+  const base = esCert ? "/certificaciones" : "/grados-titulos";
+  const [seleccion, setSeleccion] = useState<TramiteAcademico>(esCert ? "diplomados" : "maestro");
   const tramite = inicial ?? seleccion;
-  const datos = tramites[tramite];
-  const titulo = inicial ? datos.titulo : "Requisitos y Procedimiento";
+  const datos = tramitesAcademicos[tramite];
+  const titulo = inicial ? datos.titulo : programasDestacados ? "Programas y Procedimientos" : esCert ? "Requisitos de Certificación" : "Requisitos y Procedimiento";
   const [programas, setProgramas] = useState<Resultado<Programa[]>>();
   const [programa, setPrograma] = useState("");
   const [catalogo, setCatalogo] = useState<Resultado<Catalogo>>();
@@ -78,7 +81,7 @@ export default function Orientacion({ inicial }: { inicial?: Tramite }) {
     <main className={styles.pagina}>
       <nav aria-label="Ruta de navegación" className={styles.ruta}>
         <Link href="/">Inicio</Link><span aria-hidden="true">/</span>
-        <Link href="/grados-titulos">Grados y Títulos</Link><span aria-hidden="true">/</span>
+        <Link href={base}>{esCert ? "Certificaciones" : "Grados y Títulos"}</Link><span aria-hidden="true">/</span>
         <span aria-current="page">{inicial ? datos.nombre : titulo}</span>
       </nav>
       <header className={styles.hero}>
@@ -86,8 +89,8 @@ export default function Orientacion({ inicial }: { inicial?: Tramite }) {
         <h1 className="serif">{titulo}</h1>
         <p>Consulta los requisitos, prepara tus documentos y gestiona tu solicitud de forma sencilla desde SIGEP-UNSCH.</p>
         <div className={styles.acciones}>
-          <Link href={`/grados-titulos/iniciar-solicitud?tramite=${tramite}`}>Iniciar solicitud</Link>
-          <a href="#requisitos">Ver requisitos</a>
+          <Link href={`${base}/iniciar-solicitud?tramite=${tramite}`}>Iniciar solicitud</Link>
+          <a href="#requisitos">{programasDestacados ? "Ver programas" : "Ver requisitos"}</a>
         </div>
       </header>
       <div className={styles.tarjetas}>
@@ -103,24 +106,24 @@ export default function Orientacion({ inicial }: { inicial?: Tramite }) {
         ))}
       </div>
       <section className={styles.panel}>
-        <h2>{inicial === "segunda-especialidad" ? "¿Cómo obtener tu título?" : inicial ? "¿Cómo obtener tu grado?" : "Procedimiento"}</h2>
+        <h2>{esCert ? "¿Cómo obtener tu certificado?" : inicial === "segunda-especialidad" ? "¿Cómo obtener tu título?" : inicial ? "¿Cómo obtener tu grado?" : "Procedimiento"}</h2>
         <ol className={styles.recorrido}>{etapas.map(([nombre, texto], indice) => (
           <li key={nombre}><span aria-hidden="true">{indice + 1}</span><strong>{nombre}</strong><p>{texto}</p></li>
         ))}</ol>
       </section>
       <section id="requisitos" className={styles.panel}>
-        <h2>Requisitos por programa</h2>
+        <h2>{programasDestacados ? "Programas disponibles" : "Requisitos por programa"}</h2>
         <p>{datos.temas}</p>
         <div className={styles.campos}>
           {!inicial && (
             <label>¿Qué trámite deseas realizar?
               <select value={tramite} onChange={(evento) => {
                 const valor = evento.target.value;
-                if (esTramite(valor)) setSeleccion(valor);
+                if (esTramite(valor) || esCertificacion(valor)) setSeleccion(valor);
                 setPrograma("");
                 setBusqueda("");
               }}>
-                {Object.entries(tramites).map(([id, item]) => <option key={id} value={id}>{item.nombre}</option>)}
+                {Object.entries(opcionesTramite).map(([id, item]) => <option key={id} value={id}>{item.nombre}</option>)}
               </select>
             </label>
           )}

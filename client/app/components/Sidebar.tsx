@@ -2,6 +2,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useContext } from "react";
+import { PerfilAdministrativo } from "../admin/perfil";
 
 const menu = [
   {
@@ -42,6 +44,7 @@ const menu = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const administrador = useContext(PerfilAdministrativo)?.rol === "administrador";
 
   return (
     <aside className="side">
@@ -58,7 +61,7 @@ export default function Sidebar() {
           {section.group && (
             <div className="side-group">{section.group}</div>
           )}
-          {section.links.map((link) => (
+          {section.links.filter(({ href }) => administrador || !["/admin/usuarios", "/admin/auditoria"].includes(href)).map((link) => (
             <Link
               key={link.href}
               href={link.href}

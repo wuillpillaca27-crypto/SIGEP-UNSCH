@@ -2,21 +2,23 @@
 
 import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
-import { tramites, type Tramite } from "../tramites";
+import { certificaciones, tramites, type TramiteAcademico } from "../tramites";
 import { cargarDocumento, descargarDocumento, estadoVisible, solicitudes, type Perfil, type Solicitud } from "../solicitudes-api";
 import styles from "../orientacion.module.css";
 
 const pasos = ["Datos personales", "Requisitos académicos", "Documentos", "Confirmación"];
 
-export default function Asistente({ seleccion }: { seleccion?: Tramite }) {
+export default function Asistente({ seleccion, certificacion = false }: { seleccion?: TramiteAcademico; certificacion?: boolean }) {
   const [perfil, setPerfil] = useState<Perfil | null>();
   const [solicitud, setSolicitud] = useState<Solicitud>();
   const [paso, setPaso] = useState(0);
   const [ocupado, setOcupado] = useState(false);
   const [mensaje, setMensaje] = useState("");
   const [error, setError] = useState("");
-  const tramite = Object.values(tramites).find((item) => item.programa === perfil?.estudiante?.programa.tipo);
-  const compatible = tramite && (!seleccion || tramite.tipo === tramites[seleccion].tipo);
+  const opciones = certificacion ? Object.entries(certificaciones) : Object.entries(tramites);
+  const coincidencia = opciones.find(([, item]) => item.programa === perfil?.estudiante?.programa.tipo);
+  const tramite = coincidencia?.[1];
+  const compatible = tramite && (!seleccion || coincidencia?.[0] === seleccion);
 
   useEffect(() => {
     let activo = true;
@@ -42,7 +44,6 @@ export default function Asistente({ seleccion }: { seleccion?: Tramite }) {
     void ejecutar(async () => {
       const respuesta = await solicitudes.ingresar(String(datos.get("usuario")).trim(), String(datos.get("password")));
       if (!respuesta.datos) throw new Error(respuesta.error);
-      localStorage.setItem("token", respuesta.datos.token);
       setPerfil(respuesta.datos.usuario);
     });
   }
@@ -67,7 +68,7 @@ export default function Asistente({ seleccion }: { seleccion?: Tramite }) {
       {perfil === null && (
         <form onSubmit={ingresar} className={styles.formulario}>
           <p>Ingresa con una cuenta de estudiante de SIGEP.</p>
-          <label>DNI o correo institucional<input name="usuario" autoComplete="username" required /></label>
+          <label>DNI o correo personal registrado<input name="usuario" autoComplete="username" required /></label>
           <label>Contraseña<input name="password" type="password" autoComplete="current-password" required /></label>
           <button type="submit" disabled={ocupado}>{ocupado ? "Verificando…" : "Ingresar"}</button>
         </form>

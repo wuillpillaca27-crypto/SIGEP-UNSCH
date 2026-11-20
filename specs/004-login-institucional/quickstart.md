@@ -8,6 +8,8 @@ La cookie `sigep_sesion` es HttpOnly, SameSite=Lax y dura una hora. Fuera del la
 
 ## Google OAuth
 
+Para probar en Windows, copiar `server/.env.google.example` como `server/.env.google.local`. El lanzador local lee ese archivo al iniciar. Registrar `http://127.0.0.1:3000/api/sigep/auth/google/callback` en el cliente web de prueba y abrir SIGEP desde `http://127.0.0.1:3000/login` para conservar el mismo origen. En `SIGEP_GOOGLE_VINCULOS` indicar la ruta absoluta de un archivo privado, por ejemplo `server/.google-vinculos.local.json` resuelto en la máquina. Ambos archivos locales están excluidos de Git.
+
 1. En Google Cloud, configurar la pantalla de consentimiento institucional y crear un cliente OAuth de tipo aplicación web.
 2. Autorizar como URI de redirección la URL pública HTTPS de SIGEP terminada en `/api/sigep/auth/google/callback`.
 3. Configurar en el servidor `SIGEP_GOOGLE_CLIENT_ID`, `SIGEP_GOOGLE_CLIENT_SECRET` y `SIGEP_GOOGLE_REDIRECT_URI`. Mantener el secreto fuera del repositorio y del frontend.

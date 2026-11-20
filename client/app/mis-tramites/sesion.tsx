@@ -37,7 +37,6 @@ export default function Sesion({ children }: { children: ReactNode }) {
       if (!datos) setError(resultado.error ?? "No se pudo iniciar sesión.");
       else if (datos.usuario.rol !== "estudiante" || !datos.usuario.estudiante) setError("Usa una cuenta de estudiante para acceder.");
       else {
-        localStorage.setItem("token", datos.token);
         setPerfil(datos.usuario);
       }
     } finally {
@@ -47,11 +46,15 @@ export default function Sesion({ children }: { children: ReactNode }) {
 
   if (perfil) return <PerfilEstudiante.Provider value={perfil}>
     <div className="pub-secciones" style={{ textAlign: "right" }}>
-      <button className="btn btn-borde-carbon" type="button" onClick={() => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("sigep-token");
-        localStorage.removeItem("sigep-usuario");
-        window.location.replace("/login");
+      {error && <p role="alert">{error}</p>}
+      <button className="btn btn-borde-carbon" type="button" disabled={ocupado} onClick={async () => {
+        setOcupado(true);
+        const respuesta = await solicitudes.cerrarSesion();
+        if (respuesta.ok) window.location.replace("/login");
+        else {
+          setError(respuesta.error ?? "No se pudo cerrar la sesión.");
+          setOcupado(false);
+        }
       }}>Cerrar sesión</button>
     </div>
     {children}

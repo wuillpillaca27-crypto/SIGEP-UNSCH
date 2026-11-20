@@ -24,6 +24,32 @@ export const tramites = {
 
 export type Tramite = keyof typeof tramites;
 
+export const certificaciones = {
+  diplomados: {
+    nombre: "Diplomados de Posgrado",
+    titulo: "Certificación de Diplomados de Posgrado",
+    programa: "diplomado",
+    tipo: "certificado_diplomado",
+    temas: "Consulta los requisitos y documentos publicados para el diplomado de tu programa.",
+  },
+  modulos: {
+    nombre: "Certificaciones por Módulos",
+    titulo: "Certificaciones por Módulos",
+    programa: "certificacion_modulos",
+    tipo: "certificacion_modulos",
+    temas: "Selecciona tu programa para consultar la documentación requerida para la certificación por módulos.",
+  },
+} as const;
+
+export const tramitesAcademicos = { ...tramites, ...certificaciones };
+
+export type Certificacion = keyof typeof certificaciones;
+export type TramiteAcademico = keyof typeof tramitesAcademicos;
+
+export function esCertificacion(valor: string): valor is Certificacion {
+  return Object.hasOwn(certificaciones, valor);
+}
+
 export function esTramite(valor: string): valor is Tramite {
   return Object.hasOwn(tramites, valor);
 }

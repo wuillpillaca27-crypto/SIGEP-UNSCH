@@ -1,8 +1,8 @@
 import { api } from "../lib/api";
 import type { Usuario } from "../types";
 
-interface CredencialesLogin { dni: string; password: string; }
-interface RespuestaLogin    { token: string; usuario: Usuario; }
+interface CredencialesLogin { dni?: string; email?: string; password: string; }
+interface RespuestaLogin    { usuario: Usuario; }
 
 export const authService = {
   login: (credenciales: CredencialesLogin) =>
@@ -11,7 +11,5 @@ export const authService = {
   perfil: () =>
     api.get<Usuario>("/auth/perfil"),
 
-  logout: () => {
-    if (typeof window !== "undefined") localStorage.removeItem("token");
-  },
+  logout: () => api.post<{ ok: boolean }>("/auth/logout", {}),
 };

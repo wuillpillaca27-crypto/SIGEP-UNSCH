@@ -8,21 +8,17 @@ async function peticion<T>(
   endpoint: string,
   opciones: RequestInit = {}
 ): Promise<RespuestaApi<T>> {
-  const token =
-    typeof window !== "undefined" ? localStorage.getItem("token") : null;
-
   const headers: HeadersInit = {
     "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...opciones.headers,
   };
 
   try {
-    const res = await fetch(`${API_URL}${endpoint}`, { ...opciones, headers });
+    const res = await fetch(`${API_URL}${endpoint}`, { ...opciones, headers, credentials: "same-origin" });
     const json = await res.json();
 
     if (!res.ok) {
-      return { ok: false, error: json?.detail ?? json?.error ?? "Error del servidor" };
+      return { ok: false, estadoHttp: res.status, error: json?.detail ?? json?.error ?? "Error del servidor" };
     }
 
     return { ok: true, datos: json };
