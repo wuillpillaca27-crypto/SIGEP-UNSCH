@@ -1,49 +1,77 @@
 ﻿"use client";
 // /verificar-documento — verificación pública por código único o QR
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { documentosService, type DocumentoVerificado } from "../services/documentos.service";
 
 type TipoDocumento =
-  | "diploma_maestria"
-  | "diploma_doctorado"
+  | "grado_maestro"
+  | "grado_doctor"
   | "titulo_segunda_especialidad"
   | "certificado_diplomado"
   | "certificacion_modulos";
 
 const TIPOS: { value: TipoDocumento; label: string }[] = [
-  { value: "diploma_maestria",             label: "Diploma de Maestría" },
-  { value: "diploma_doctorado",            label: "Diploma de Doctorado" },
+  { value: "grado_maestro",               label: "Diploma de Maestría" },
+  { value: "grado_doctor",                label: "Diploma de Doctorado" },
   { value: "titulo_segunda_especialidad",  label: "Título de Segunda Especialidad" },
   { value: "certificado_diplomado",        label: "Certificado de Diplomado" },
   { value: "certificacion_modulos",        label: "Certificación por Módulos" },
 ];
 
-type EstadoVerificacion = "idle" | "cargando" | "no-encontrado" | "error-servidor";
+type Consulta = { codigo: string; tipo: string };
+type Resultado = { consulta: Consulta; documento?: DocumentoVerificado; error?: "no-encontrado" | "error-servidor" | "invalido" };
+
+function extraerCodigo(texto: string) {
+  const valor = texto.trim();
+  if (!/^https?:\/\//i.test(valor)) return valor;
+  try {
+    const enlace = new URL(valor);
+    return enlace.pathname.replace(/\/$/, "") === "/verificar-documento" ? enlace.searchParams.get("codigo")?.trim() ?? "" : "";
+  } catch {
+    return "";
+  }
+}
 
 export default function VerificarDocumentoPage() {
-  const [codigo, setCodigo]       = useState("");
-  const [tipo, setTipo]           = useState<TipoDocumento>("diploma_maestria");
-  const [estado, setEstado]       = useState<EstadoVerificacion>("idle");
+  return <Suspense fallback={<main className="pub-contenido"><p role="status">Cargando verificación…</p></main>}><VerificadorDesdeEnlace /></Suspense>;
+}
+
+function VerificadorDesdeEnlace() {
+  const inicial = useSearchParams().get("codigo") ?? "";
+  return <Verificador key={inicial} inicial={inicial} />;
+}
+
+function Verificador({ inicial }: { inicial: string }) {
+  const [codigo, setCodigo] = useState(inicial);
+  const [tipo, setTipo] = useState("");
+  const [consulta, setConsulta] = useState<Consulta | null>(inicial ? { codigo: extraerCodigo(inicial), tipo: "" } : null);
+  const [resultado, setResultado] = useState<Resultado>();
+  const vigente = resultado?.consulta === consulta ? resultado : undefined;
+  const valido = !consulta || /^[A-Z0-9]+(?:-[A-Z0-9]+)*$/i.test(consulta.codigo) && consulta.codigo.length >= 6 && consulta.codigo.length <= 80;
+  const estado = !consulta ? "idle" : !valido ? "invalido" : !vigente ? "cargando" : vigente.error ?? "encontrado";
+  const documento = vigente?.documento;
+
+  useEffect(() => {
+    if (!consulta || !valido) return;
+    let activa = true;
+    documentosService.verificarQr(consulta.codigo, consulta.tipo).then((respuesta) => {
+      if (!activa) return;
+      const error = respuesta.estadoHttp === 404 ? "no-encontrado" : respuesta.estadoHttp === 400 ? "invalido" : "error-servidor";
+      setResultado(respuesta.datos ? { consulta, documento: respuesta.datos } : { consulta, error });
+    });
+    return () => { activa = false; };
+  }, [consulta, valido]);
 
   function handleVerificar(e: React.FormEvent) {
     e.preventDefault();
-    if (!codigo.trim()) return;
-
-    setEstado("cargando");
-
-    // Llamada real al backend (cuando exista el endpoint)
-    fetch(`/api/documentos/verificar-qr/${encodeURIComponent(codigo.trim())}`)
-      .then(async (res) => {
-        if (res.status === 404) { setEstado("no-encontrado"); return; }
-        if (!res.ok)            { setEstado("error-servidor"); return; }
-        // El backend aún no está implementado; la respuesta real se procesará aquí
-        setEstado("no-encontrado");
-      })
-      .catch(() => setEstado("error-servidor"));
+    if (codigo.trim()) setConsulta({ codigo: extraerCodigo(codigo), tipo });
   }
 
   function limpiar() {
     setCodigo("");
-    setEstado("idle");
+    setTipo("");
+    setConsulta(null);
   }
 
   return (
@@ -74,8 +102,9 @@ export default function VerificarDocumentoPage() {
                 id="tipo-doc"
                 className="campo-input campo-select"
                 value={tipo}
-                onChange={(e) => setTipo(e.target.value as TipoDocumento)}
+                onChange={(e) => { setTipo(e.target.value); setConsulta(null); }}
               >
+                <option value="">Todos los tipos</option>
                 {TIPOS.map((t) => (
                   <option key={t.value} value={t.value}>{t.label}</option>
                 ))}
@@ -90,9 +119,9 @@ export default function VerificarDocumentoPage() {
                 id="codigo-doc"
                 type="text"
                 className="campo-input"
-                placeholder="Ejemplo: SIGEP-2024-GT-00123"
+                placeholder="Código impreso o enlace QR"
                 value={codigo}
-                onChange={(e) => setCodigo(e.target.value)}
+                onChange={(e) => { setCodigo(e.target.value); setConsulta(null); }}
                 autoComplete="off"
                 spellCheck={false}
                 required
@@ -124,6 +153,17 @@ export default function VerificarDocumentoPage() {
           </form>
 
           {/* Resultado */}
+          {documento && (
+            <div className={`alerta ${documento.demostracion ? "alerta-advertencia" : "alerta-exito"} verificar-resultado`} role="status">
+              <strong>{documento.demostracion ? "Código de demostración encontrado" : "Documento verificado"}</strong>
+              {documento.demostracion && <p>Registro de prueba sin validez oficial.</p>}
+              <p><strong>Código</strong> {documento.codigo}</p>
+              <p><strong>Tipo</strong> {TIPOS.find(({ value }) => value === documento.tipoTramite)?.label}</p>
+              <p><strong>Programa</strong> {documento.programa}</p>
+              {documento.emitidoEn && <p><strong>Fecha de emisión</strong> {new Intl.DateTimeFormat("es-PE", { dateStyle: "long", timeZone: "America/Lima" }).format(new Date(documento.emitidoEn))}</p>}
+            </div>
+          )}
+          {estado === "invalido" && <p className="alerta alerta-advertencia verificar-resultado" role="alert">Ingresa el código impreso o un enlace QR válido de Verificar Documento.</p>}
           {estado === "no-encontrado" && (
             <div className="alerta alerta-advertencia verificar-resultado" role="alert">
               <strong>Documento no encontrado.</strong>{" "}
@@ -141,13 +181,9 @@ export default function VerificarDocumentoPage() {
             </div>
           )}
 
-          {/* Aviso de servicio en implementación */}
           <div className="pub-info-pendiente" style={{ marginTop: 32 }}>
             <InfoIcon />
-            El servicio de verificación en línea estará completamente disponible una vez
-            que el módulo de emisión de documentos sea habilitado por la Oficina de Grados
-            y Títulos. Los documentos emitidos con anterioridad al sistema deben verificarse
-            de forma presencial.
+            Para documentos sin código o emitidos fuera del sistema, comunícate con la Oficina de Grados y Títulos.
           </div>
         </section>
 
