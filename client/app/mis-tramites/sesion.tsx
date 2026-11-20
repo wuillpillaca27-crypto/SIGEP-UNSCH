@@ -45,7 +45,17 @@ export default function Sesion({ children }: { children: ReactNode }) {
     }
   }
 
-  if (perfil) return <PerfilEstudiante.Provider value={perfil}>{children}</PerfilEstudiante.Provider>;
+  if (perfil) return <PerfilEstudiante.Provider value={perfil}>
+    <div className="pub-secciones" style={{ textAlign: "right" }}>
+      <button className="btn btn-borde-carbon" type="button" onClick={() => {
+        localStorage.removeItem("token");
+        localStorage.removeItem("sigep-token");
+        localStorage.removeItem("sigep-usuario");
+        window.location.replace("/login");
+      }}>Cerrar sesión</button>
+    </div>
+    {children}
+  </PerfilEstudiante.Provider>;
 
   return (
     <main className={styles.pagina}>
@@ -55,7 +65,7 @@ export default function Sesion({ children }: { children: ReactNode }) {
           <form className={styles.formulario} onSubmit={ingresar} aria-busy={ocupado}>
             <h2>Acceso de estudiante</h2>
             {error && <p role="alert">{error}</p>}
-            <label>DNI o correo institucional<input name="usuario" autoComplete="username" required /></label>
+            <label>DNI o correo personal registrado<input name="usuario" autoComplete="username" required /></label>
             <label>Contraseña<input name="password" type="password" autoComplete="current-password" required /></label>
             <div className={styles.controles}>
               <button type="submit" disabled={ocupado}>{ocupado ? "Verificando…" : "Ingresar"}</button>

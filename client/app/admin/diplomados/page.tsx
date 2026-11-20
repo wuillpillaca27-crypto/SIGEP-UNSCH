@@ -1,8 +1,5 @@
-﻿export default function Pagina() {
-  return (
-    <>
-      <div className="eyebrow">ADMINISTRACIÓN</div>
-      <h1 className="serif">Diplomados de posgrado</h1>
-    </>
-  );
+import Revision from "../revision";
+
+export default function Pagina() {
+  return <Revision titulo="Diplomados de posgrado" tipos="certificado_diplomado" />;
 }

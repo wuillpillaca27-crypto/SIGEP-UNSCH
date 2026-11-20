@@ -1,8 +1,5 @@
-﻿export default function Pagina() {
-  return (
-    <>
-      <div className="eyebrow">ADMINISTRACIÓN</div>
-      <h1 className="serif">Documentos y diplomas</h1>
-    </>
-  );
+import Revision from "../revision";
+
+export default function Pagina() {
+  return <Revision titulo="Documentos y diplomas" estado="emitido" />;
 }

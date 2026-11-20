@@ -1,8 +1,5 @@
-﻿export default function Pagina() {
-  return (
-    <>
-      <div className="eyebrow">ADMINISTRACIÓN</div>
-      <h1 className="serif">Certificación por módulos</h1>
-    </>
-  );
+import Revision from "../revision";
+
+export default function Pagina() {
+  return <Revision titulo="Certificación por módulos" tipos="certificacion_modulos" />;
 }

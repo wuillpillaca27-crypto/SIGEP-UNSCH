@@ -1,8 +1,5 @@
-﻿export default function Pagina() {
-  return (
-    <>
-      <div className="eyebrow">ADMINISTRACIÓN</div>
-      <h1 className="serif">Segundas especialidades</h1>
-    </>
-  );
+import Revision from "../revision";
+
+export default function Pagina() {
+  return <Revision titulo="Segundas especialidades" tipos="titulo_segunda_especialidad" />;
 }

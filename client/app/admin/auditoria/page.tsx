@@ -1,8 +1,5 @@
-﻿export default function Pagina() {
-  return (
-    <>
-      <div className="eyebrow">ADMINISTRACIÓN</div>
-      <h1 className="serif">Auditoría del sistema</h1>
-    </>
-  );
+import Gestion from "../gestion";
+
+export default function Pagina() {
+  return <Gestion seccion="auditoria" />;
 }

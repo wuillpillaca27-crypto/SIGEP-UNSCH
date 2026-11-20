@@ -1,8 +1,5 @@
-﻿export default function Pagina() {
-  return (
-    <>
-      <div className="eyebrow">ADMINISTRACIÓN</div>
-      <h1 className="serif">Validación de requisitos</h1>
-    </>
-  );
+import Revision from "../revision";
+
+export default function Pagina() {
+  return <Revision titulo="Validación de requisitos" plantillas />;
 }

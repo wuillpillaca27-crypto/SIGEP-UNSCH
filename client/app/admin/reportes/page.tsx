@@ -1,8 +1,5 @@
-﻿export default function Pagina() {
-  return (
-    <>
-      <div className="eyebrow">ADMINISTRACIÓN</div>
-      <h1 className="serif">Reportes y estadísticas</h1>
-    </>
-  );
+import ReportesPanel from "../reportes-panel";
+
+export default function Pagina() {
+  return <ReportesPanel titulo="Reportes y estadísticas" />;
 }
