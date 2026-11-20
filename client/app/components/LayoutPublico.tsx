@@ -25,9 +25,14 @@ export default function LayoutPublico({ children }: { children: React.ReactNode 
 
   return (
     <div className={`pagina-publica${oscuro ? " tema-oscuro" : ""}`}>
-      <NavbarPublica oscuro={oscuro} onToggleTema={toggleTema} />
+      <NavbarPublica />
       {children}
-      <footer className="footer">© UNSCH · Ayacucho, Perú · SIGEP-UNSCH</footer>
+      <footer className="footer">
+        © UNSCH · Ayacucho, Perú · SIGEP-UNSCH
+        <button type="button" className="footer-tema" onClick={toggleTema}>
+          {oscuro ? "Modo claro" : "Modo oscuro"}
+        </button>
+      </footer>
       <AccesibilidadWidget />
     </div>
   );

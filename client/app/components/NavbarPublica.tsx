@@ -1,15 +1,7 @@
 ﻿"use client";
-// ─────────────────────────────────────────────────────────────
-//  NavbarPublica — UNA SOLA BARRA fiel a la imagen de referencia
-//
-//  [Escudo | SIGEP-UNSCH | Escuela de Posgrado]  ←brand     nav→  [🎓 GRADOS Y TÍTULOS ▾] [🏅 CERTIFICACIONES ▾] [📋 MIS TRÁMITES] [📄 VERIFICAR] | [?] | [→ INGRESAR]
-//
-//  Fondo: #1f2023 (negro carbón)
-//  Cápsulas menú: #7a1520 (rojo oscuro)
-//  Botón INGRESAR: #b8202c (rojo)
-// ─────────────────────────────────────────────────────────────
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 const MENU_ITEMS = [
@@ -54,9 +46,8 @@ const MENU_ITEMS = [
 ] as const;
 
 type MenuItem = (typeof MENU_ITEMS)[number];
-interface Props { oscuro: boolean; onToggleTema: () => void; }
-
-export default function NavbarPublica({ oscuro, onToggleTema }: Props) {
+export default function NavbarPublica() {
+  const pathname = usePathname();
   const [abierto, setAbierto]     = useState<string | null>(null);
   const [menuMovil, setMenuMovil] = useState(false);
   const [submovil, setSubmovil]   = useState<string | null>(null);
@@ -83,7 +74,7 @@ export default function NavbarPublica({ oscuro, onToggleTema }: Props) {
       <div className="nb-brand-bar">
         <Link href="/" className="nb-brand" aria-label="SIGEP-UNSCH — Inicio">
           <div className="nb-escudo-wrap">
-            <Image src="/escudo-unsch.png" alt="Escudo UNSCH" width={30} height={40} priority />
+            <Image src="/escudo-unsch.png" alt="Escudo UNSCH" width={42} height={55} priority />
           </div>
           <div className="nb-brand-sep" aria-hidden="true" />
           <div className="nb-brand-textblock">
@@ -102,12 +93,12 @@ export default function NavbarPublica({ oscuro, onToggleTema }: Props) {
       {/* ── NAV (centro + derecha) ─────────────────────────── */}
       <nav className="nb-nav-bar" aria-label="Navegación principal">
 
-        {/* Ítems con cápsula roja */}
         <ul className="nb-menu" role="menubar">
           {MENU_ITEMS.map((item) => (
             <ItemEscritorio
               key={item.id}
               item={item}
+              destacado={pathname === item.href || pathname.startsWith(item.href + "/") || (pathname === "/" && item.id === "grados")}
               abierto={abierto === item.id}
               onToggle={() =>
                 item.items
@@ -118,26 +109,15 @@ export default function NavbarPublica({ oscuro, onToggleTema }: Props) {
           ))}
         </ul>
 
-        {/* Derecha: ayuda + sep + INGRESAR + toggle tema */}
         <div className="nb-derecha">
+          <span className="nb-sep-vert" aria-hidden="true" />
           <Link href="/ayuda" className="nb-ayuda-btn" aria-label="Ayuda" title="Ayuda">
             <IcoAyuda />
           </Link>
-          <span className="nb-sep-vert" aria-hidden="true" />
           <Link href="/login" className="nb-ingresar">
             <IcoIngresar />
             INGRESAR
           </Link>
-          <button
-            className="nb-toggle-tema"
-            type="button"
-            onClick={onToggleTema}
-            aria-label={oscuro ? "Modo claro" : "Modo oscuro"}
-            title={oscuro ? "Modo claro" : "Modo oscuro"}
-            style={{ marginLeft: 10 }}
-          >
-            {oscuro ? "☀" : "🌙"}
-          </button>
         </div>
 
         {/* Hamburguesa (móvil) */}
@@ -201,11 +181,12 @@ export default function NavbarPublica({ oscuro, onToggleTema }: Props) {
 }
 
 /* ── Ítem escritorio ──────────────────────────────────────── */
-function ItemEscritorio({ item, abierto, onToggle }: { item: MenuItem; abierto: boolean; onToggle: () => void }) {
+function ItemEscritorio({ item, destacado, abierto, onToggle }: { item: MenuItem; destacado: boolean; abierto: boolean; onToggle: () => void }) {
+  const clase = `nb-item-btn${destacado ? " nb-item-destacado" : ""}`;
   if (!item.items) {
     return (
       <li role="none" className="nb-item">
-        <Link href={item.href} className="nb-item-btn" role="menuitem">
+        <Link href={item.href} className={clase} role="menuitem" aria-current={destacado ? "page" : undefined}>
           <span className="nb-item-icono">{item.icon}</span>{item.label}
         </Link>
       </li>
@@ -213,10 +194,10 @@ function ItemEscritorio({ item, abierto, onToggle }: { item: MenuItem; abierto: 
   }
   return (
     <li role="none" className={`nb-item nb-item-drop${abierto ? " nb-item-abierto" : ""}`}>
-      <button type="button" className="nb-item-btn" role="menuitem" aria-haspopup="true" aria-expanded={abierto} onClick={onToggle}>
+      <button type="button" className={clase} role="menuitem" aria-haspopup="true" aria-expanded={abierto} onClick={onToggle}>
         <span className="nb-item-icono">{item.icon}</span>
-        {item.label}
-        <span className="nb-chevron" aria-hidden="true">▾</span>
+        <span className="nb-item-label">{item.label}</span>
+        {item.id !== "tramites" && <span className="nb-chevron" aria-hidden="true" />}
       </button>
       {abierto && (
         <ul className="nb-dropdown" role="menu" aria-label={item.label}>
