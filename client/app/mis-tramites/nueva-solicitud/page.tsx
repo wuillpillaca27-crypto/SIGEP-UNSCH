@@ -8,8 +8,8 @@ export default function Page() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!localStorage.getItem("sigep-usuario")) {
-      router.replace("/login?continuar=/mis-tramites/nueva-solicitud");
+    if (!localStorage.getItem("sigep-usuario") && !localStorage.getItem("token")) {
+      router.replace("/grados-titulos/iniciar-solicitud");
     }
   }, [router]);
 
@@ -22,9 +22,10 @@ export default function Page() {
       </div>
       <div className="pub-secciones">
         <div className="pub-seccion">
+          <Link href="/grados-titulos/iniciar-solicitud" className="pub-btn-accion">Iniciar una solicitud de grado o título</Link>
           <div className="pub-info-pendiente pub-info-construccion">
             <span>🔧</span>
-            Este módulo está en construcción. Pronto estará disponible.
+            Las solicitudes de certificación aún no están disponibles en esta página.
           </div>
           <Link href="/mis-tramites" className="pub-btn-volver">← Volver a Mis Trámites</Link>
         </div>

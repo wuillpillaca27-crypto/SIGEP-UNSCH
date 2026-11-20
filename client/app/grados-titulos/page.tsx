@@ -1,4 +1,6 @@
 ﻿// /grados-titulos — página pública informativa
+import Link from "next/link";
+
 export default function GradosTitulosPage() {
   return (
     <main className="pub-contenido">
@@ -14,7 +16,7 @@ export default function GradosTitulosPage() {
           <p>El grado de Maestro se otorga al egresado de maestría que aprueba los requisitos académicos y administrativos establecidos por la Escuela de Posgrado de la UNSCH, incluyendo la sustentación de tesis o trabajo de investigación.</p>
           <div className="pub-info-pendiente">
             <InfoIcon />
-            Los requisitos detallados se publicarán cuando el módulo de grados esté habilitado.
+            <Link href="/grados-titulos/maestro">Consultar programas y requisitos de maestría</Link>
           </div>
         </section>
 
@@ -23,7 +25,7 @@ export default function GradosTitulosPage() {
           <p>El grado de Doctor se otorga al egresado del programa doctoral que demuestra contribución original al conocimiento mediante la sustentación y aprobación de su tesis doctoral.</p>
           <div className="pub-info-pendiente">
             <InfoIcon />
-            Los requisitos detallados se publicarán cuando el módulo de grados esté habilitado.
+            <Link href="/grados-titulos/doctor">Consultar programas y requisitos de doctorado</Link>
           </div>
         </section>
 
@@ -32,7 +34,7 @@ export default function GradosTitulosPage() {
           <p>El Título de Segunda Especialidad acredita la formación especializada en un área profesional, obtenido tras completar el programa correspondiente y cumplir los requisitos de titulación.</p>
           <div className="pub-info-pendiente">
             <InfoIcon />
-            Los requisitos detallados se publicarán cuando el módulo de grados esté habilitado.
+            <Link href="/grados-titulos/segunda-especialidad">Consultar programas y requisitos de Segunda Especialidad</Link>
           </div>
         </section>
 
@@ -61,9 +63,10 @@ export default function GradosTitulosPage() {
               <span>Sustentar y aprobar la tesis o trabajo de investigación</span>
             </div>
           </div>
-          <a href="/mis-tramites/nueva-solicitud" className="pub-btn-accion">
+          <Link href="/grados-titulos/requisitos">Consultar requisitos por programa</Link>{" "}
+          <Link href="/grados-titulos/iniciar-solicitud" className="pub-btn-accion">
             Iniciar solicitud →
-          </a>
+          </Link>
         </section>
       </div>
     </main>

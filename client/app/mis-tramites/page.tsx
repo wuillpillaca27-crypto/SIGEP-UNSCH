@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { solicitudes } from "../grados-titulos/solicitudes-api";
 
 const OPCIONES = [
   {
@@ -49,14 +50,22 @@ export default function MisTramitesPage() {
   const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
-    const raw = localStorage.getItem("sigep-usuario");
-    if (!raw) {
-      // Redirige al login guardando la URL destino para continuar tras autenticarse
-      router.replace("/login?continuar=/mis-tramites");
-      return;
-    }
-    try { setUsuario(JSON.parse(raw)); } catch { /* ignore */ }
-    setCargando(false);
+    let vigente = true;
+    solicitudes.perfil().then(({ datos }) => {
+      if (!vigente) return;
+      if (datos) {
+        setUsuario({ nombre: `${datos.nombres} ${datos.apellidos}` });
+      } else {
+        const raw = localStorage.getItem("sigep-usuario");
+        if (!raw) {
+          router.replace("/grados-titulos/iniciar-solicitud");
+          return;
+        }
+        try { setUsuario(JSON.parse(raw)); } catch { /* sesión de demostración inválida */ }
+      }
+      setCargando(false);
+    });
+    return () => { vigente = false; };
   }, [router]);
 
   if (cargando) {
