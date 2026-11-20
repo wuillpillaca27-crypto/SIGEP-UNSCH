@@ -749,14 +749,19 @@ html.a11y-monochrome .pagina-inicio { filter: grayscale(1); }
   align-items: center;
   justify-content: space-between;
   gap: 20px;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: none;
   min-height: calc(var(--nb-row-height) + 3px);
-  padding: 0 clamp(16px, 2.8vw, 38px);
-  padding-right: clamp(16px, 2.1vw, 29px);
+  margin: 0;
+  padding-block: 0;
+  padding-inline-start: clamp(16px, 2.8vw, 38px);
+  padding-inline-end: clamp(16px, 2.1vw, 29px);
   background: #191c23;
   border-bottom: 3px solid #d4a017;
 }
 
-.nb-brand-bar { min-width: 0; }
+.nb-brand-bar { flex: 1 1 auto; min-width: min-content; }
 .nb-brand {
   display: flex;
   align-items: center;
@@ -793,13 +798,14 @@ html.a11y-monochrome .pagina-inicio { filter: grayscale(1); }
   white-space: nowrap;
   line-height: 1;
 }
-.nb-sigep { font-size: 30px; font-weight: 700; }
+.nb-sigep { font-size: 32px; font-weight: 700; }
 .nb-unsch { color: #ffc516; font-size: .8em; }
 .nb-brand-pipe { color: #a0a3a9; font-size: 18px; margin: 0 8px; }
-.nb-escuela { font-size: 18px; font-weight: 700; }
+.nb-escuela { font-size: 19px; font-weight: 700; }
 .nb-subtitulo-block {
+  contain: inline-size;
   color: #c5c7cc;
-  font: 11px/1.2 Arial, sans-serif;
+  font: 12px/1.2 Arial, sans-serif;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -809,23 +815,28 @@ html.a11y-monochrome .pagina-inicio { filter: grayscale(1); }
 .nb-menu {
   display: flex;
   align-items: center;
-  flex-shrink: 0;
 }
-.nb-nav-bar { gap: 8px; }
-.nb-menu { list-style: none; margin: 0; padding: 0; }
+.nb-nav-bar { flex: 4 0 auto; gap: 8px; }
+.nb-menu {
+  flex: 1 0 auto;
+  justify-content: space-evenly;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
 .nb-item { position: relative; }
 .nb-item-btn {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 41px;
+  height: 43px;
   padding: 0 14px;
   background: transparent;
   border: 0;
   border-radius: 5px;
   color: #fff;
-  font: 700 11px/1 Arial, sans-serif;
+  font: 700 12px/1 Arial, sans-serif;
   cursor: pointer;
   white-space: nowrap;
   text-decoration: none;
@@ -837,7 +848,7 @@ html.a11y-monochrome .pagina-inicio { filter: grayscale(1); }
 .nb-item-destacado .nb-item-label { text-decoration: underline; text-underline-offset: 4px; }
 .nb-item-btn:focus-visible { outline: 2px solid #ffc516; outline-offset: 2px; }
 .nb-item-icono { display: flex; align-items: center; flex-shrink: 0; }
-.nb-item-icono svg { width: 20px; height: 20px; }
+.nb-item-icono svg { width: 21px; height: 21px; }
 .nb-chevron {
   border: 4px solid transparent;
   border-top-color: currentColor;
@@ -897,8 +908,8 @@ html.a11y-monochrome .pagina-inicio { filter: grayscale(1); }
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 25px;
-  height: 25px;
+  width: 27px;
+  height: 27px;
   border-radius: 3px;
   border: 1px solid #fff;
   color: #ffffff;
@@ -927,9 +938,9 @@ html.a11y-monochrome .pagina-inicio { filter: grayscale(1); }
   border: none;
   border-radius: 4px;
   color: #ffffff;
-  font: 700 11px/1 Arial, sans-serif;
-  width: 99px;
-  height: 34px;
+  font: 700 12px/1 Arial, sans-serif;
+  width: 104px;
+  height: 36px;
   text-decoration: none;
   transition: background .15s;
 }
@@ -1022,14 +1033,19 @@ html.a11y-monochrome .pagina-inicio { filter: grayscale(1); }
 .nb-movil-ingresar:hover { background: #8b1520; }
 
 /* ══ RESPONSIVO ═══════════════════════════════════════════════ */
-@media (max-width: 1270px) {
-  .nb-item-btn { padding-inline: 8px; }
+@media (max-width: 1500px) {
+  .nb-header { gap: 8px; }
+  .nb-item-btn { gap: 5px; padding-inline: 2px; }
   .nb-brand { gap: 10px; }
+}
+@media (max-width: 1350px) {
   .nb-sigep { font-size: 24px; }
   .nb-escuela { font-size: 15px; }
 }
-@media (max-width: 1120px) {
+@media (max-width: 1250px) {
   .nb-header { --nb-row-height: 64px; }
+  .nb-brand-bar { min-width: 0; }
+  .nb-nav-bar { flex: 0 0 auto; }
   .nb-menu    { display: none; }
   .nb-derecha { display: none; }
   .nb-hamburguesa { display: flex; }
