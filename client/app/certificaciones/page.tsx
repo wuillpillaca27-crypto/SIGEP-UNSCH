@@ -1,70 +1,38 @@
-﻿// /certificaciones — página pública informativa
+import Link from "next/link";
+import { SelloPosgrado } from "../grados-titulos/orientacion";
+import styles from "../grados-titulos/orientacion.module.css";
+
+const enlaces = [
+  ["diplomados", "Diplomados de Posgrado", "Consulta el catálogo y solicita el certificado de tu diplomado."],
+  ["modulos", "Certificaciones por Módulos", "Consulta los programas habilitados y presenta tu solicitud."],
+  ["requisitos", "Requisitos de Certificación", "Revisa los requisitos y documentos publicados para tu programa."],
+  ["programas", "Programas y Procedimientos", "Encuentra tu programa y conoce las etapas de la solicitud."],
+];
+
 export default function CertificacionesPage() {
   return (
-    <main className="pub-contenido">
-      <div className="pub-hero-mini">
-        <span className="eyebrow">ESCUELA DE POSGRADO · UNSCH</span>
-        <h1 className="serif">Certificaciones</h1>
-        <p>Información sobre diplomados de posgrado y certificaciones por módulos ofrecidos por la Escuela de Posgrado.</p>
-      </div>
-
-      <div className="pub-secciones">
-        <section id="diplomados" className="pub-seccion">
-          <h2 className="serif">Diplomados de Posgrado</h2>
-          <p>Los diplomados son programas de formación continua de corta duración que permiten la actualización y especialización en áreas específicas del conocimiento. Al concluir satisfactoriamente el programa se otorga un certificado de diplomado.</p>
-          <div className="pub-info-pendiente">
-            <InfoIcon />
-            El catálogo de diplomados vigentes se publicará próximamente.
-          </div>
-        </section>
-
-        <section id="modulos" className="pub-seccion">
-          <h2 className="serif">Certificaciones por Módulos</h2>
-          <p>Las certificaciones por módulos permiten acreditar competencias específicas mediante la aprobación de módulos independientes. Cada módulo aprobado genera un certificado individual.</p>
-          <div className="pub-info-pendiente">
-            <InfoIcon />
-            El catálogo de módulos vigentes se publicará próximamente.
-          </div>
-        </section>
-
-        <section id="requisitos" className="pub-seccion">
-          <h2 className="serif">Requisitos de certificación</h2>
-          <div className="pub-requisitos-lista">
-            <div className="pub-requisito-item">
-              <span className="pub-requisito-num">1</span>
-              <span>Estar matriculado en el programa de diplomado o módulo</span>
-            </div>
-            <div className="pub-requisito-item">
-              <span className="pub-requisito-num">2</span>
-              <span>Cumplir con la asistencia mínima requerida</span>
-            </div>
-            <div className="pub-requisito-item">
-              <span className="pub-requisito-num">3</span>
-              <span>Aprobar las evaluaciones del programa</span>
-            </div>
-            <div className="pub-requisito-item">
-              <span className="pub-requisito-num">4</span>
-              <span>Solicitar la emisión del certificado en la Oficina de Posgrado</span>
-            </div>
-          </div>
-        </section>
-
-        <section id="programas" className="pub-seccion">
-          <h2 className="serif">Programas y procedimientos</h2>
-          <p>Los programas de diplomados y certificaciones son ofrecidos por las distintas Unidades de Posgrado de la UNSCH. Para información sobre programas disponibles, horarios e inscripciones, comuníquese con la Escuela de Posgrado.</p>
-          <a href="/mis-tramites/nueva-solicitud" className="pub-btn-accion">
-            Iniciar solicitud →
-          </a>
-        </section>
+    <main className={styles.pagina}>
+      <nav className={styles.ruta} aria-label="Ruta de navegación">
+        <Link href="/">Inicio</Link><span aria-hidden="true">/</span>
+        <span aria-current="page">Certificaciones</span>
+      </nav>
+      <header className={styles.hero}>
+        <SelloPosgrado />
+        <h1>Certificaciones</h1>
+        <p>Consulta los programas de posgrado, prepara tus documentos y sigue el estado de tu solicitud.</p>
+        <div className={styles.acciones}>
+          <Link href="/certificaciones/iniciar-solicitud">Iniciar solicitud</Link>
+          <Link href="/mis-tramites/expedientes">Consultar expediente</Link>
+        </div>
+      </header>
+      <div className={styles.campos}>
+        {enlaces.map(([ruta, titulo, descripcion]) => (
+          <section key={ruta} id={ruta} className={styles.panel}>
+            <h2><Link href={`/certificaciones/${ruta}`}>{titulo}</Link></h2>
+            <p>{descripcion}</p>
+          </section>
+        ))}
       </div>
     </main>
-  );
-}
-
-function InfoIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-    </svg>
   );
 }

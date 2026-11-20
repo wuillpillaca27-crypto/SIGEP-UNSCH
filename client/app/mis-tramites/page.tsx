@@ -58,7 +58,7 @@ export default function MisTramitesPage() {
       } else {
         const raw = localStorage.getItem("sigep-usuario");
         if (!raw) {
-          router.replace("/grados-titulos/iniciar-solicitud");
+          router.replace("/mis-tramites/nueva-solicitud");
           return;
         }
         try { setUsuario(JSON.parse(raw)); } catch { /* sesión de demostración inválida */ }
