@@ -1,23 +1,9 @@
-﻿"use client";
+"use client";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import AccesibilidadWidget from "./components/AccesibilidadWidget";
 import NavbarPublica from "./components/NavbarPublica";
-
-const accesos = [
-  { label: "Estudiantes",          href: "/mis-tramites" },
-  { label: "Docentes",             href: "/mis-tramites" },
-  { label: "Administradores",      href: "/login" },
-  { label: "Nueva solicitud",      href: "/mis-tramites/nueva-solicitud" },
-  { label: "Seguimiento",          href: "/mis-tramites/expedientes" },
-  { label: "Reportes y auditoría", href: "/login" },
-];
-
-const avisos = [
-  { categoria: "[CATEGORÍA]", titulo: "[Título del aviso institucional]" },
-  { categoria: "[CATEGORÍA]", titulo: "[Título del aviso institucional]" },
-  { categoria: "[CATEGORÍA]", titulo: "[Título del aviso institucional]" },
-];
+import PortalAcademico from "./components/PortalAcademico";
 
 export default function Home() {
   const [oscuro, setOscuro] = useState(false);
@@ -47,7 +33,7 @@ export default function Home() {
     <div className={`pagina-inicio ${oscuro ? "tema-oscuro" : ""}`}>
 
       {/* ── Header con nueva navbar ─────────────────── */}
-      <NavbarPublica oscuro={oscuro} onToggleTema={toggleTema} />
+      <NavbarPublica />
 
       {/* ── Hero ───────────────────────────────────── */}
       <section className="hero">
@@ -113,37 +99,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Explorar ───────────────────────────────── */}
-      <section className="section">
-        <h2>EXPLORAR</h2>
-        <div className="tiles">
-          {accesos.map((acc) => (
-            <a key={acc.label} className="tile" href={acc.href}>
-              <div className="img" />
-              <div className="lbl">{acc.label}</div>
-            </a>
-          ))}
-        </div>
-      </section>
-
-      {/* ── Avisos ─────────────────────────────────── */}
-      <section className="section blanca">
-        <h2>AVISOS</h2>
-        <div className="cards">
-          {avisos.map((a, i) => (
-            <a key={i} className="card" href="#">
-              <div className="img" />
-              <div className="card-body">
-                <div className="card-cat">{a.categoria}</div>
-                <div className="card-title serif">{a.titulo}</div>
-              </div>
-            </a>
-          ))}
-        </div>
-      </section>
-
-      {/* ── Footer ─────────────────────────────────── */}
-      <footer className="footer">© UNSCH · Ayacucho, Perú · SIGEP-UNSCH</footer>
+      <PortalAcademico oscuro={oscuro} cambiarTema={toggleTema} />
       <AccesibilidadWidget />
     </div>
   );
