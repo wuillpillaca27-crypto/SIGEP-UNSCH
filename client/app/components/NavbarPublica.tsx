@@ -9,21 +9,21 @@ const MENU_ITEMS = [
     id: "grados", label: "GRADOS Y TÍTULOS", href: "/grados-titulos",
     icon: <IcoGrados />,
     items: [
-      { label: "Grado de Maestro",               href: "/grados-titulos#maestro",              icon: <IcoGrados /> },
-      { label: "Grado de Doctor",                href: "/grados-titulos#doctor",               icon: <IcoDoctor /> },
-      { label: "Título de Segunda Especialidad", href: "/grados-titulos#segunda-especialidad", icon: <IcoSegEsp /> },
-      { label: "Requisitos y Procedimiento",     href: "/grados-titulos#requisitos",           icon: <IcoReq /> },
-      { label: "Iniciar Solicitud",              href: "/mis-tramites/nueva-solicitud",        icon: <IcoEditar /> },
+      { label: "Grado de Maestro",               href: "/grados-titulos/maestro",              icon: <IcoGrados /> },
+      { label: "Grado de Doctor",                href: "/grados-titulos/doctor",               icon: <IcoDoctor /> },
+      { label: "Título de Segunda Especialidad", href: "/grados-titulos/segunda-especialidad", icon: <IcoSegEsp /> },
+      { label: "Requisitos y Procedimiento",     href: "/grados-titulos/requisitos",           icon: <IcoReq /> },
+      { label: "Iniciar Solicitud",              href: "/grados-titulos/iniciar-solicitud",    icon: <IcoEditar /> },
     ],
   },
   {
     id: "certificaciones", label: "CERTIFICACIONES", href: "/certificaciones",
     icon: <IcoCert />,
     items: [
-      { label: "Diplomados de Posgrado",      href: "/certificaciones#diplomados", icon: <IcoCert /> },
-      { label: "Certificaciones por Módulos", href: "/certificaciones#modulos",    icon: <IcoModulos /> },
-      { label: "Requisitos de Certificación", href: "/certificaciones#requisitos", icon: <IcoReq /> },
-      { label: "Programas y Procedimientos",  href: "/certificaciones#programas",  icon: <IcoLibro /> },
+      { label: "Diplomados de Posgrado",      href: "/certificaciones/diplomados", icon: <IcoCert /> },
+      { label: "Certificaciones por Módulos", href: "/certificaciones/modulos",    icon: <IcoModulos /> },
+      { label: "Requisitos de Certificación", href: "/certificaciones/requisitos", icon: <IcoReq /> },
+      { label: "Programas y Procedimientos",  href: "/certificaciones/programas",  icon: <IcoLibro /> },
     ],
   },
   {
@@ -62,10 +62,15 @@ export default function NavbarPublica() {
   }, []);
 
   useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (e.key === "Escape") { setAbierto(null); setMenuMovil(false); } };
+    const h = (e: KeyboardEvent) => { if (e.key === "Escape") { setAbierto(null); setMenuMovil(false); setSubmovil(null); } };
     document.addEventListener("keydown", h);
     return () => document.removeEventListener("keydown", h);
   }, []);
+
+  function cerrarMenuMovil() {
+    setMenuMovil(false);
+    setSubmovil(null);
+  }
 
   return (
     <header className="nb-header" ref={headerRef}>
@@ -127,7 +132,7 @@ export default function NavbarPublica() {
           aria-label={menuMovil ? "Cerrar menú" : "Abrir menú"}
           aria-expanded={menuMovil}
           aria-controls="nb-menu-movil"
-          onClick={() => setMenuMovil((v) => !v)}
+          onClick={() => menuMovil ? cerrarMenuMovil() : setMenuMovil(true)}
         >
           {menuMovil ? <IcoCerrar /> : <><span /><span /><span /></>}
         </button>
@@ -155,7 +160,7 @@ export default function NavbarPublica() {
                     <ul className="nb-movil-sub" role="list">
                       {item.items.map((sub) => (
                         <li key={sub.href}>
-                          <Link href={sub.href} className="nb-movil-sub-link" onClick={() => setMenuMovil(false)}>
+                          <Link href={sub.href} className="nb-movil-sub-link" onClick={cerrarMenuMovil}>
                             <span className="nb-movil-icono">{sub.icon}</span>{sub.label}
                           </Link>
                         </li>
@@ -164,15 +169,15 @@ export default function NavbarPublica() {
                   )}
                 </>
               ) : (
-                <Link href={item.href} className="nb-movil-btn" onClick={() => setMenuMovil(false)}>
+                <Link href={item.href} className="nb-movil-btn" onClick={cerrarMenuMovil}>
                   <span className="nb-movil-icono">{item.icon}</span>{item.label}
                 </Link>
               )}
             </div>
           ))}
           <div className="nb-movil-footer">
-            <Link href="/ayuda" className="nb-movil-ayuda" onClick={() => setMenuMovil(false)}><IcoAyuda /> Ayuda</Link>
-            <Link href="/login" className="nb-movil-ingresar" onClick={() => setMenuMovil(false)}><IcoIngresar /> INGRESAR</Link>
+            <Link href="/ayuda" className="nb-movil-ayuda" onClick={cerrarMenuMovil}><IcoAyuda /> Ayuda</Link>
+            <Link href="/login" className="nb-movil-ingresar" onClick={cerrarMenuMovil}><IcoIngresar /> INGRESAR</Link>
           </div>
         </nav>
       )}

@@ -1,5 +1,5 @@
 import Seguimiento from "../expedientes/seguimiento";
 
 export default function Page() {
-  return <Seguimiento />;
+  return <Seguimiento vista="solicitudes" />;
 }

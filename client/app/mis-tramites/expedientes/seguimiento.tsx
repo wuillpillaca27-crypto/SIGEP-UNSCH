@@ -1,29 +1,59 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cargarDocumento, descargarDocumento, estadoVisible, solicitudes, type Solicitud } from "../../grados-titulos/solicitudes-api";
 import { esCertificacion, tramitesAcademicos } from "../../grados-titulos/tramites";
 import styles from "../../grados-titulos/orientacion.module.css";
 
-export default function Seguimiento({ soloObservados = false }: { soloObservados?: boolean }) {
+const vistas = {
+  solicitudes: ["Mis solicitudes", "Consulta las solicitudes registradas y retoma tus borradores.", "No tienes solicitudes registradas."],
+  expedientes: ["Estado de expediente", "Consulta el estado y los documentos de tus expedientes presentados.", "Aún no tienes expedientes presentados."],
+  observaciones: ["Observaciones pendientes", "Revisa los requisitos que requieren atención antes de adjuntar una corrección.", "No tienes expedientes observados."],
+  subsanacion: ["Subsanar documentos", "Adjunta los documentos corregidos y envía la subsanación a revisión.", "No tienes expedientes pendientes de subsanación."],
+  historial: ["Historial de trámites", "Consulta los movimientos de tus expedientes, del más reciente al más antiguo.", "Aún no tienes movimientos de expedientes."],
+} as const;
+
+const fecha = new Intl.DateTimeFormat("es-PE", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Lima" });
+
+export default function Seguimiento({ vista }: { vista: keyof typeof vistas }) {
   const [lista, setLista] = useState<Solicitud[]>();
   const [error, setError] = useState("");
+  const [errorConsulta, setErrorConsulta] = useState("");
   const [ocupado, setOcupado] = useState(false);
   const [aviso, setAviso] = useState("");
+  const [busqueda, setBusqueda] = useState("");
+  const [reintento, setReintento] = useState(0);
+  const [sesionVencida, setSesionVencida] = useState(false);
+  const destinoAtendido = useRef("");
+
+  useEffect(() => {
+    const destino = window.location.hash.slice(1);
+    if (!lista || !/^(expediente|subsanar)-\d+$/.test(destino) || destinoAtendido.current === destino) return;
+    const elemento = document.getElementById(destino);
+    if (elemento) {
+      destinoAtendido.current = destino;
+      elemento.scrollIntoView();
+    }
+  }, [lista]);
 
   useEffect(() => {
     if (ocupado) return;
     let vigente = true;
+    let consultando = false;
     let anterior: Solicitud[] | undefined;
     async function consultar() {
+      if (consultando) return;
+      consultando = true;
       const respuesta = await solicitudes.listar();
+      consultando = false;
       if (!vigente) return;
       if (!respuesta.datos) {
-        if (!anterior) {
+        if (!anterior || respuesta.estadoHttp === 401) {
           setLista([]);
-          setError(respuesta.error ?? "No se pudieron consultar los expedientes.");
         }
+        setErrorConsulta(respuesta.error ?? "No se pudieron consultar los expedientes.");
+        if (respuesta.estadoHttp === 401) setSesionVencida(true);
         return;
       }
       const previos = new Map(anterior?.map((item) => [item.id, item.estado]));
@@ -32,6 +62,8 @@ export default function Seguimiento({ soloObservados = false }: { soloObservados
         setAviso(cambios.map((item) => `Expediente ${item.codigo}: ${estadoVisible(item.estado)}.`).join(" "));
       }
       anterior = respuesta.datos;
+      setErrorConsulta("");
+      setSesionVencida(false);
       setLista(respuesta.datos);
     }
     void consultar();
@@ -42,7 +74,7 @@ export default function Seguimiento({ soloObservados = false }: { soloObservados
       vigente = false;
       window.clearInterval(intervalo);
     };
-  }, [ocupado]);
+  }, [ocupado, reintento]);
 
   async function ejecutar(accion: () => Promise<Solicitud | void>) {
     setOcupado(true);
@@ -55,29 +87,71 @@ export default function Seguimiento({ soloObservados = false }: { soloObservados
     } finally { setOcupado(false); }
   }
 
-  const expedientes = lista?.filter((item) => !soloObservados || item.estado === "observado");
+  const [titulo, descripcion, vacio] = vistas[vista];
+  const observados = vista === "observaciones" || vista === "subsanacion";
+  const normalizar = (texto: string) => texto.toLocaleLowerCase("es").normalize("NFD").replace(/\p{Diacritic}/gu, "");
+  const consulta = normalizar(busqueda.trim());
+  const expedientes = lista?.filter((item) => {
+    if (observados && item.estado !== "observado") return false;
+    if (!observados && vista !== "solicitudes" && !item.presentadoEn) return false;
+    const tipo = Object.values(tramitesAcademicos).find(({ tipo }) => tipo === item.tipoTramite);
+    return normalizar(`${item.codigo} ${item.programa.nombre} ${tipo?.nombre ?? item.tipoTramite}`).includes(consulta);
+  });
+  const movimientos = vista === "historial" ? expedientes?.flatMap((item) =>
+    item.historial.map((movimiento) => ({ ...movimiento, expedienteId: item.id, codigo: item.codigo }))
+  ).sort((a, b) => Date.parse(b.creadoEn) - Date.parse(a.creadoEn) || b.id - a.id) : undefined;
   return (
     <main className={styles.pagina}>
+      <nav className={styles.ruta} aria-label="Ruta de navegación">
+        <Link href="/mis-tramites">Mis Trámites</Link><span aria-hidden="true">/</span><span aria-current="page">{titulo}</span>
+      </nav>
       <header className={styles.hero}>
-        <h1 className="serif">{soloObservados ? "Observaciones y subsanación" : "Mis expedientes"}</h1>
-        <p>Revisa el avance de tus solicitudes de grado, título y certificación.</p>
-        <div className={styles.acciones}><Link href="/mis-tramites/nueva-solicitud">Nueva solicitud</Link></div>
+        <h1>{titulo}</h1>
+        <p>{descripcion}</p>
+        <div className={styles.acciones}><Link href="/mis-tramites/nueva-solicitud">Nueva solicitud</Link><Link href="/mis-tramites">Volver al panel</Link></div>
       </header>
       {error && <p role="alert">{error}</p>}
+      {errorConsulta && <div className={styles.panel}>
+        <p role="alert">{errorConsulta}</p>
+        {sesionVencida ? <button type="button" onClick={() => window.location.reload()}>Volver a ingresar</button>
+          : <button type="button" onClick={() => { setErrorConsulta(""); setReintento(reintento + 1); }}>Reintentar consulta</button>}
+      </div>}
       {aviso && <p role="status">{aviso}</p>}
       {!lista && <p role="status">Consultando solicitudes…</p>}
-      {expedientes?.length === 0 && !error && <p>No hay expedientes para mostrar.</p>}
-      {expedientes?.map((item) => {
+      {lista && !sesionVencida && <section className={styles.panel}><div className={styles.formulario}>
+        <label>Buscar por código, programa o trámite
+          <input type="search" value={busqueda} onChange={(evento) => setBusqueda(evento.target.value)} />
+        </label>
+      </div></section>}
+      {(movimientos ?? expedientes)?.length === 0 && !errorConsulta && <p>{consulta ? "No hay resultados para esta búsqueda." : vacio}</p>}
+      {movimientos && movimientos.length > 0 && <section className={styles.panel}>
+        <ol className={styles.lista}>{movimientos.map((movimiento) => (
+          <li key={movimiento.id}>
+            <strong>{estadoVisible(movimiento.estadoDespues)}</strong> · <time dateTime={movimiento.creadoEn}>{fecha.format(new Date(movimiento.creadoEn))}</time>
+            <p><Link href={`/mis-tramites/expedientes#expediente-${movimiento.expedienteId}`}>{movimiento.codigo}</Link></p>
+            {movimiento.motivo && <p>{movimiento.motivo}</p>}
+          </li>
+        ))}</ol>
+      </section>}
+      {vista !== "historial" && expedientes?.map((item) => {
         const tramite = Object.entries(tramitesAcademicos).find(([, datos]) => datos.tipo === item.tipoTramite);
         const base = tramite && esCertificacion(tramite[0]) ? "/certificaciones" : "/grados-titulos";
         return (
-          <article key={item.id} className={styles.panel}>
+          <article key={item.id} id={vista === "expedientes" ? `expediente-${item.id}` : vista === "subsanacion" ? `subsanar-${item.id}` : undefined} className={styles.panel}>
             <h2>{tramite?.[1].nombre ?? item.tipoTramite}</h2>
             <p>{item.programa.nombre} · <strong>{estadoVisible(item.estado)}</strong></p>
             {item.presentadoEn ? <p>{item.codigo} · {new Date(item.presentadoEn).toLocaleDateString("es-PE")}</p>
               : <p><Link href={`${base}/iniciar-solicitud${tramite ? `?tramite=${tramite[0]}` : ""}`}>Continuar borrador</Link></p>}
             {item.observaciones && <p>{item.observaciones}</p>}
-            {item.estado === "observado" && (
+            {item.estado === "observado" && vista !== "subsanacion" && (
+              <>
+                {vista === "observaciones" && <ul className={styles.lista}>{item.validaciones.filter(({ estado }) => estado === "observado").map(({ id, plantilla, observacion }) => (
+                  <li key={id}><strong>{plantilla.nombre}</strong>{observacion && <p>{observacion}</p>}</li>
+                ))}</ul>}
+                <p><Link href={`/mis-tramites/subsanacion#subsanar-${item.id}`}>Subsanar documentos</Link></p>
+              </>
+            )}
+            {item.estado === "observado" && vista === "subsanacion" && (
               <div className={styles.formulario}>
                 <h3>Próxima acción · Subsanar observaciones</h3>
                 {item.validaciones.filter(({ estado }) => estado === "observado").map(({ id, plantilla, observacion }) => (
