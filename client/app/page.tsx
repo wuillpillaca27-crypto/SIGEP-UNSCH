@@ -77,26 +77,23 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Rector ─────────────────────────────────── */}
-      <section className="rector-section" aria-labelledby="rector-title">
-        <div className="rector-content">
-          <div className="rector-copy">
-            <div className="rector-eyebrow">AUTORIDADES UNIVERSITARIAS</div>
-            <h2 id="rector-title" className="serif">Dr. Emilio Ramírez Roca</h2>
-            <div className="rector-role">RECTOR</div>
-            <p>
-              Comprometidos con una gestión cercana, transparente y orientada
-              al desarrollo académico de nuestra comunidad universitaria.
-            </p>
-          </div>
+      <section className="rector-section" aria-label="Autoridades universitarias" style={{ padding: 0 }}>
+        <a
+          href="/banner-institucional-posgrado.png"
+          target="_blank"
+          rel="noopener"
+          title="Ver el banner a tamaño original"
+          style={{ display: "block" }}
+        >
           <Image
-            className="rector-photo"
-            src="/rector-emilio-ramirez-roca-sin-fondo.png"
-            alt="Dr. Emilio Ramírez Roca, Rector de la Universidad Nacional de San Cristóbal de Huamanga"
-            width={360}
-            height={610}
+            src="/banner-institucional-posgrado.png"
+            alt="Escuela de Posgrado de la UNSCH. El director, Dr. Johnny Aldo Tinco Jayo, da la bienvenida a los estudiantes. A la derecha, el rector, Dr. Emilio Ramírez Roca."
+            width={2172}
+            height={724}
+            sizes="100vw"
+            style={{ display: "block", width: "100%", height: "auto", objectFit: "contain" }}
           />
-        </div>
+        </a>
       </section>
 
       <PortalAcademico oscuro={oscuro} cambiarTema={toggleTema} />
