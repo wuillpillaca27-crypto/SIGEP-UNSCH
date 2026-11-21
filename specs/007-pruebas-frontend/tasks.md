@@ -26,11 +26,11 @@ No hay cambios de servidor, esquema o modelo de datos. El único fundamento com�
 
 **Prueba independiente**: Ejecutar `npm test` desde `client/`; la prueba de humo pasa con código 0, identifica su nombre y estado, y una aserción fallida muestra valores esperado y recibido con código distinto de 0.
 
-- [ ] T001 [US1] Actualizar `client/package.json` con las devDependencies Vitest, `@testing-library/react`, `@testing-library/user-event`, `@testing-library/jest-dom`, jsdom y MSW, más el script exacto `"test": "vitest --run"`; respetar justificaciones de `specs/007-pruebas-frontend/research.md`.
-- [ ] T002 [US1] Actualizar `client/package-lock.json` para sincronizar las dependencias de desarrollo declaradas en `client/package.json`.
-- [ ] T003 [US1] Crear `client/vitest.config.ts` con entorno `jsdom`, reporter `verbose` para mostrar nombre y estado por caso, setup `./vitest.setup.ts`, alias `@/*` → raíz `client/` (igual a `client/tsconfig.json`) y `TZ=America/Lima` antes de iniciar la ejecución de pruebas.
-- [ ] T004 [US1] Crear `client/vitest.setup.ts` para cargar `@testing-library/jest-dom/vitest` y configurar MSW: iniciar antes de la suite, restablecer handlers después de cada caso y cerrar después de la suite.
-- [ ] T005 [US1] Crear `client/app/__tests__/lib/runner.test.ts` como prueba de humo del runner que verifique que ejecuta una aserción y reporta nombre/estado del caso.
+- [X] T001 [US1] Actualizar `client/package.json` con las devDependencies Vitest, `@testing-library/react`, `@testing-library/user-event`, `@testing-library/jest-dom`, jsdom y MSW, más el script exacto `"test": "vitest --run"`; respetar justificaciones de `specs/007-pruebas-frontend/research.md`.
+- [X] T002 [US1] Actualizar `client/package-lock.json` para sincronizar las dependencias de desarrollo declaradas en `client/package.json`.
+- [X] T003 [US1] Crear `client/vitest.config.ts` con entorno `jsdom`, reporter `verbose` para mostrar nombre y estado por caso, setup `./vitest.setup.ts`, alias `@/*` → raíz `client/` (igual a `client/tsconfig.json`) y `TZ=America/Lima` antes de iniciar la ejecución de pruebas.
+- [X] T004 [US1] Crear `client/vitest.setup.ts` para cargar `@testing-library/jest-dom/vitest` y configurar MSW: iniciar antes de la suite, restablecer handlers después de cada caso y cerrar después de la suite.
+- [X] T005 [US1] Crear `client/app/__tests__/lib/runner.test.ts` como prueba de humo del runner que verifique que ejecuta una aserción y reporta nombre/estado del caso.
 
 **Punto de control**: `npm test` ejecuta Vitest en una sola corrida y no requiere servicios reales.
 
