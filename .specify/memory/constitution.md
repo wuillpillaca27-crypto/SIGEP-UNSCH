@@ -1,9 +1,9 @@
 <!-- Sync Impact Report
-Version change: 1.0.0 → 1.1.0
-Modified principles: none; all four existing principles are preserved verbatim.
-Added sections: Cambios mínimos; Stack y dependencias; Seguridad; Base de datos; Verificación; Referencias; Idioma; Governance.
-Removed sections: none.
-Follow-up TODOs: none.
+Cambio de versión: 1.1.0 → 1.2.0
+Principios modificados: Cambios mínimos (refactorización dirigida explícitamente por especificación, respaldada por pruebas que preservan el comportamiento); Verificación (build y pruebas de la capa tocada).
+Secciones añadidas: Pruebas; Arquitectura documentada.
+Secciones eliminadas: ninguna.
+Pendientes: Alinear con Jest las configuraciones existentes (Vitest en client y node --test en server); definir un comando build para server; crear los documentos actualmente ausentes de docs/01-analisis-de-sistema a docs/04-modelo-c4 antes de cambios arquitectónicos.
 -->
 # Constitución de SIGEP-UNSCH
 
@@ -25,7 +25,7 @@ Cada tarea se completa cuando existe evidencia de su criterio de aceptación. Re
 
 ## Cambios mínimos
 
-No reescribir ni refactorizar código que ya funciona salvo que la especificación lo requiera. Respetar la arquitectura y las convenciones actuales del proyecto para reducir regresiones y mantener la coherencia del sistema.
+No reescribir ni refactorizar código que ya funciona salvo que la especificación lo pida explícitamente. Se permite la refactorización dirigida por una especificación, incluida la aplicación de principios SOLID y patrones de diseño, cuando pruebas previas respalden el comportamiento existente y pruebas posteriores comprueben que se conserva. Respetar la arquitectura y las convenciones actuales del proyecto para reducir regresiones y mantener la coherencia del sistema.
 
 ## Stack y dependencias
 
@@ -41,11 +41,19 @@ Todo cambio del esquema Prisma requiere una migración documentada en el plan. L
 
 ## Verificación
 
-Antes de cerrar una tarea, ejecutar `npm run build` en `client/` y `npm start` en `server/`; ambos deben terminar sin errores. Las pruebas del servidor usan `node --test`.
+Antes de cerrar una tarea, ejecutar el build y las pruebas de la capa tocada (`client/` o `server/`) con los comandos definidos para esa capa; ambos deben completarse sin errores.
+
+## Pruebas
+
+Usar Jest como framework de pruebas en `client/` y `server/`. Las ejecuciones de pruebas deben generar un reporte de cobertura.
 
 ## Referencias
 
 Usar `docs/legacy/openspec/api-contracts.md` y `docs/legacy/openspec/data-models.md` como referencias para los contratos y modelos de datos.
+
+## Arquitectura documentada
+
+Respetar la arquitectura documentada en `docs/01-analisis-de-sistema` a `docs/04-modelo-c4`. Antes de implementar un cambio arquitectónico, actualizar los documentos correspondientes; si alguno todavía no existe, crearlo antes de implementar el cambio.
 
 ## Idioma
 
@@ -55,4 +63,4 @@ Redactar las especificaciones y la documentación del proyecto en español.
 
 La constitución rige las decisiones y revisiones del proyecto. Toda enmienda debe conservar los principios vigentes salvo que una modificación explícita los cambie, documentar su impacto y actualizar la versión según SemVer: MAJOR para cambios incompatibles, MINOR para principios o secciones nuevas y PATCH para correcciones editoriales sin cambio de sentido. Antes de cerrar cada tarea, revisar su conformidad con estos principios y registrar la evidencia de verificación.
 
-**Versión** 1.1.0 · **Ratificada** 2026-11-20 · **Última enmienda** 2026-11-21
+**Versión** 1.2.0 · **Ratificada** 2026-11-20 · **Última enmienda** 2026-11-21
