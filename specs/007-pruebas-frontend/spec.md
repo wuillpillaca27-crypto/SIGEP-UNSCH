@@ -8,6 +8,15 @@
 
 **Entrada**: Descripción del usuario: "$speckit-specify Pruebas unitarias del frontend (client/) para describir y verificar el comportamiento existente en seis capas independientes, sin modificar comportamiento de producción ni tocar server/ o la base de datos. Requisitos detallados de referencia en docs/legacy/kiro-pruebas-unitarias/requirements.md."
 
+## Aclaraciones
+
+### Sesión 2026-11-21
+
+- Q: Zona horaria de `formatearFecha` y `formatearFechaHora`: ¿qué zona utilizan? → A: La zona horaria local del proceso; en Perú (UTC-5), `2024-01-05T00:00:00.000Z` corresponde al 04/01/2024 y `14:30Z` a las 09:30.
+- Q: ¿`usePaginacion` recibe el total de páginas y limita `irA`? → A: No; solo recibe `porPagina`, y `irA(p)` asigna directamente el valor recibido.
+- Q: ¿Qué texto devuelve el código actual para fechas inválidas y para JSON de error no parseable? → A: Las utilidades devuelven `Invalid Date`; el cliente HTTP captura el fallo de `res.json()` y devuelve `No se pudo conectar con el servidor`.
+- Q: ¿Qué alias de rutas define `client/tsconfig.json` para `@/`? → A: `@/*` apunta a `./*`, la raíz de `client/`.
+
 ## Escenarios de usuario y pruebas
 
 ### Historia 1 - Ejecutar la suite completa (Prioridad: P1)
@@ -34,8 +43,8 @@ Como desarrollador, quiero verificar las utilidades de formato y presentación p
 
 **Escenarios de aceptación**:
 
-1. **Dado** una fecha válida, **cuando** se formatea como fecha o fecha y hora, **entonces** el resultado conserva el formato `dd/mm/aaaa` y la hora de 24 horas según corresponda.
-2. **Dado** una fecha inválida, vacía o arbitraria, **cuando** se formatea, **entonces** el resultado es `Fecha inválida`.
+1. **Dado** una fecha válida, **cuando** se formatea como fecha o fecha y hora, **entonces** el resultado conserva el formato local `dd/mm/aaaa` y la hora local según corresponda; las funciones usan la zona horaria local del proceso, no fuerzan UTC. En UTC-5, `2024-01-05T00:00:00.000Z` produce la fecha 04/01/2024 y `2024-01-05T14:30:00.000Z` corresponde a las 09:30.
+2. **Dado** una fecha inválida, vacía o arbitraria, **cuando** se formatea, **entonces** el resultado observado es `Invalid Date`.
 3. **Dado** uno de los estados conocidos, **cuando** se consulta su información, **entonces** etiqueta y clase corresponden a la configuración vigente; **dado** un estado desconocido, **entonces** se devuelve ese valor como etiqueta y la clase `badge-pendiente`.
 4. **Dado** nombres y apellidos no vacíos, **cuando** se obtiene el nombre completo, **entonces** se devuelve `<apellidos>, <nombres>`.
 5. **Dado** un texto de longitud igual o inferior al límite, **cuando** se trunca, **entonces** se devuelve sin cambios; si lo supera, se devuelven los primeros `max` caracteres y una elipsis Unicode (`…`).
@@ -53,7 +62,7 @@ Como desarrollador, quiero verificar cómo el cliente HTTP construye solicitudes
 1. **Dado** una respuesta exitosa con JSON, **cuando** se consulta el cliente, **entonces** se devuelve `{ ok: true, datos: cuerpo }` sin alterar el cuerpo.
 2. **Dado** un error HTTP 4xx o 5xx con JSON, **cuando** el cuerpo presenta `detail`, `error` o ningún campo de error, **entonces** se selecciona el mensaje con prioridad `detail`, luego `error` y finalmente `Error del servidor`.
 3. **Dado** un fallo de red o un error HTTP cuyo cuerpo no se puede interpretar como JSON, **cuando** se realiza la solicitud, **entonces** se devuelve `{ ok: false, error: "No se pudo conectar con el servidor" }`.
-4. **Dado** un token almacenado, **cuando** se realiza una solicitud en navegador, **entonces** se envía `Authorization: Bearer <token>`; sin token o sin `window`, no se añade esa cabecera ni se accede a almacenamiento del navegador.
+4. **Dado** cualquier solicitud realizada por el cliente actual, **cuando** se inspeccionan sus cabeceras, **entonces** incluye `Content-Type: application/json` y no lee almacenamiento local ni añade una cabecera `Authorization`, incluso si existe un token en el navegador.
 5. **Dado** cada método GET, POST, PUT, PATCH y DELETE, **cuando** se realiza la solicitud, **entonces** el método y cuerpo observados coinciden con el contrato actual, los métodos con cuerpo serializan JSON y todas las solicitudes incluyen `Content-Type: application/json`.
 
 ### Historia 4 - Verificar servicios de dominio (Prioridad: P4)
@@ -81,7 +90,7 @@ Como desarrollador, quiero verificar los valores y transiciones de los hooks de 
 
 **Escenarios de aceptación**:
 
-1. **Dado** `usePaginacion`, **cuando** se inicializa, navega y reinicia, **entonces** expone los valores iniciales actuales, actualiza página al navegar y reinicia a 1 sin cambiar `porPagina`; los valores fuera del rango válido se ignoran.
+1. **Dado** `usePaginacion`, **cuando** se inicializa, navega y reinicia, **entonces** expone `pagina=1` y el `porPagina` recibido (o su valor predeterminado), `irA(p)` asigna directamente `p` sin validar límites y `reiniciar` restablece página a 1 sin cambiar `porPagina`. El hook no recibe el total de páginas.
 2. **Dado** `useBuscar`, **cuando** se inicializa o recibe cambios, **entonces** `texto` se actualiza sincrónicamente y `busqueda` solo adopta el último valor tras el intervalo configurado (300 ms por defecto).
 3. **Dado** `useFetch`, **cuando** se inicia, resuelve éxito o error, o se recarga, **entonces** sus estados reflejan el resultado actual y no conservan datos parciales ante error.
 4. **Dado** una respuesta obsoleta o una respuesta pendiente tras desmontaje, **cuando** termina, **entonces** no reemplaza el estado correspondiente a la solicitud más reciente ni actualiza el consumidor desmontado.
@@ -106,9 +115,9 @@ Como desarrollador, quiero verificar contenido, clases, accesibilidad e interacc
 
 ### Casos límite
 
-- Fechas vacías, arbitrarias o inválidas; estados desconocidos; textos iguales al límite de truncado y por encima de él.
+- Fechas vacías, arbitrarias o inválidas (resultado `Invalid Date`); cambios de fecha y hora causados por la zona local del proceso; estados desconocidos; textos iguales al límite de truncado y por encima de él.
 - Respuestas HTTP 4xx/5xx con campos de error en distintos órdenes de prioridad, JSON inválido y errores de red.
-- Solicitudes sin token y ejecución sin entorno de navegador.
+- Solicitudes con o sin token almacenado y ejecución sin entorno de navegador; el cliente actual no accede a `localStorage` ni añade `Authorization`.
 - Parámetros opcionales omitidos, incluidos explícitamente vacíos cuando el contrato actual los conserva.
 - Búsquedas repetidas antes de vencer el debounce, respuestas concurrentes en orden inverso y desmontaje con solicitud pendiente.
 - Listas vacías, límites de páginas, campos sin error, botones ocupados/deshabilitados y modal cerrado.
@@ -120,10 +129,10 @@ Como desarrollador, quiero verificar contenido, clases, accesibilidad e interacc
 - **FR-001**: El equipo DEBE poder ejecutar la suite completa del frontend desde `client/` mediante un solo comando.
 - **FR-002**: La ejecución DEBE informar el nombre y estado de cada prueba, devolver código 0 si todas pasan y distinto de 0 si alguna falla, e incluir esperado y recibido en el detalle de fallos.
 - **FR-003**: Las pruebas DEBEN organizarse en subcarpetas `lib`, `services`, `hooks` y `components`.
-- **FR-004**: La suite DEBE describir el comportamiento existente de `formatearFecha`, `formatearFechaHora`, `infoEstado`, `nombreCompleto` y `truncar`, incluidos los casos inválidos y límites indicados en la Historia 2.
-- **FR-005**: La suite DEBE describir las respuestas exitosas, errores, fallos de red, autenticación, ejecución sin navegador, métodos y cabeceras actuales del cliente HTTP.
+- **FR-004**: La suite DEBE describir el comportamiento existente de `formatearFecha`, `formatearFechaHora`, `infoEstado`, `nombreCompleto` y `truncar`, incluidos los casos inválidos y límites indicados en la Historia 2. Las funciones de fecha usan la zona local del proceso y devuelven `Invalid Date` para entradas inválidas.
+- **FR-005**: La suite DEBE describir las respuestas exitosas, errores, fallos de red y de parseo JSON, ejecución sin navegador, métodos y cabeceras actuales del cliente HTTP. Actualmente añade `Content-Type: application/json`, pero no lee el token ni agrega `Authorization`.
 - **FR-006**: La suite DEBE cubrir los servicios auth, estudiantes, expedientes, usuarios, programas, documentos y auditoría, verificando método, URL, parámetros opcionales, cuerpo y propagación inalterada de respuestas.
-- **FR-007**: La suite DEBE cubrir valores iniciales, transiciones, debounce, recarga y descarte de respuestas obsoletas o posteriores al desmontaje de `usePaginacion`, `useBuscar` y `useFetch`.
+- **FR-007**: La suite DEBE cubrir valores iniciales, transiciones, debounce, recarga y descarte de respuestas obsoletas o posteriores al desmontaje de los hooks correspondientes. Para `usePaginacion`, DEBE reflejar la asignación directa de `irA` y que el hook no conoce el total de páginas.
 - **FR-008**: La suite DEBE cubrir el contenido, clases, accesibilidad e interacciones de `Tabla`, `Paginacion`, `Badge`, `Campo`, `Boton`, `Modal`, `Alerta` y `CargandoSpinner`.
 - **FR-009**: La incorporación de pruebas NO DEBE alterar el comportamiento del código de producción. Cualquier cambio imprescindible en producción DEBE justificarse y registrarse antes de realizarlo.
 - **FR-010**: El alcance DEBE limitarse al frontend `client/`; no se DEBE modificar `server/` ni la base de datos.
@@ -148,7 +157,7 @@ Como desarrollador, quiero verificar contenido, clases, accesibilidad e interacc
 ## Supuestos
 
 - La referencia `docs/legacy/kiro-pruebas-unitarias/requirements.md` aporta detalle histórico; esta especificación y el código actual determinan el alcance vigente.
-- Los nombres de operaciones, propiedades, rutas, textos y casos concretos se confirman al inspeccionar el frontend durante la planificación e implementación.
+- El alias `@/*` de `client/tsconfig.json` apunta a `./*`, relativo a la raíz de `client/`.
 - Las pruebas caracterizan el comportamiento presente. Si una afirmación histórica no coincide con el código actual, se documenta la discrepancia y no se cambia producción para forzar que pase.
 - El equipo considera independientes las seis historias para planificar y entregar por capas; P1 habilita la ejecución, y P2-P6 agregan cobertura incremental.
 - Se usan mecanismos de aislamiento y simulación para que las pruebas no dependan de servicios externos ni alteren datos reales.
