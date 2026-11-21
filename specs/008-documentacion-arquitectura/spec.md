@@ -7,6 +7,13 @@
 **Estado**: Borrador
 
 **Entrada**: Descripción del usuario: Documentar en Sprint 1 el análisis del sistema y su arquitectura tal como existen en SIGEP-UNSCH, separando hechos implementados de objetivos Sprint 2 y sin modificar código de cliente ni servidor.
+## Clarificaciones
+
+### Sesión 2026-11-21
+
+- Q: ¿Cuál es el nombre exacto requerido para el archivo del diagrama de código del Nivel 4? → A: `docs/04-modelo-c4/Nivel4-DiagramadeCodigo.md`, sin guiones entre las palabras del nombre.
+- Q: ¿Qué fuentes deben determinar las historias, requisitos, endpoints y motor de base de datos documentados? → A: Las historias de usuario de `specs/001` a `specs/006`, los RF derivados de las specs y rutas reales de `server/src`, y las fuentes de esquema/runtime; la base es SQLite local mediante Prisma con adaptador libSQL y `DATABASE_URL` con prefijo `file:`. `docs/legacy/openspec/requirements.md` solo aporta RF-01 a RF-03.
+- Q: ¿Cómo está organizado y compuesto el servidor Express que debe describirse como implementado hoy? → A: Es un monolito Express cuyos módulos `registrarX` se componen desde `server/src/index.js` y reciben las dependencias que define cada firma; `server/src/lib/`, `server/src/middleware/` y `server/src/routes/` están vacías.
 
 ## Escenarios de usuario y pruebas
 
@@ -97,21 +104,23 @@ Como integrante técnico o interesado institucional, quiero visualizar el contex
   - `docs/04-modelo-c4/Nivel1-DiagramadeContextodelSistema.md`
   - `docs/04-modelo-c4/Nivel2-DiagramadeContenedores.md`
   - `docs/04-modelo-c4/Nivel3-Diagrama-de-Componentes.md`
-  - `docs/04-modelo-c4/Nivel4-Diagrama-de-Codigo.md`
+  - `docs/04-modelo-c4/Nivel4-DiagramadeCodigo.md`
 - **FR-002**: Cada documento DEBE distinguir explícitamente entre `Implementado hoy` y `Objetivo Sprint 2`; lo no confirmado por fuentes DEBE quedar identificado como propuesta, pendiente o decisión por validar.
-- **FR-003**: El análisis DEBE derivar actores, historias y requisitos de `specs/001` a `specs/007`, contrastando el estado implementado con `server/prisma/schema.prisma`, `server/src/`, `client/app/` y `docs/legacy/openspec/`.
-- **FR-004**: Los documentos de historias y requisitos DEBEN preservar los identificadores RF, HU y de escenarios que existan en las fuentes. Si una fuente no tiene identificadores estables, DEBEN asignar identificadores locales y citar el archivo, sección y número de historia/escenario de origen. Toda afirmación sobre implementación actual DEBE señalar archivo o documento fuente.
+- **FR-003**: El análisis DEBE derivar las historias de usuario de `specs/001` a `specs/006`, usar `specs/001` a `specs/007` como fuentes contextuales cuando corresponda y derivar requisitos funcionales del contenido de esas especificaciones y de las operaciones observadas en las rutas de `server/src/`; DEBE contrastar el modelo con `server/prisma/schema.prisma`, las rutas del cliente con `client/app/` y usar `docs/legacy/openspec/` como antecedente.
+- **FR-004**: Los documentos de historias y requisitos DEBEN conservar cada identificador que exista en su fuente. Cuando una fuente carezca de identificadores estables, pueden asignar identificadores locales únicos, siempre que mantengan junto a ellos la ruta, sección e historia/escenario de origen. No deben atribuir al legado OpenSpec requisitos que no contiene: `docs/legacy/openspec/requirements.md` enumera únicamente RF-01 a RF-03. Toda afirmación sobre implementación actual DEBE señalar archivo o documento fuente.
 - **FR-005**: El análisis de actores DEBE distinguir roles definidos en el modelo de datos de actores/roles con operaciones verificadas en el código; no DEBE inferir permisos por el nombre de un rol.
 - **FR-006**: `04-atributos-de-calidad.md` y `08-escenarios-atributos-calidad.md` DEBEN cubrir rendimiento, seguridad, disponibilidad, mantenibilidad y trazabilidad/auditoría. El objetivo de rendimiento debe indicar hasta 2.000 usuarios virtuales concurrentes como propuesta pendiente de validación, no como capacidad medida o garantizada.
 - **FR-007**: Toda métrica de atributo de calidad DEBE llevar literalmente la marca `propuesta, pendiente de validación del equipo`; las métricas actuales no disponibles deben declararse como no medidas.
 - **FR-008**: La descripción de seguridad DEBE reflejar las pruebas disponibles en fuentes para JWT/sesión, roles y titularidad, distinguiendo controles observados de objetivos. La trazabilidad DEBE describir auditoría solo al nivel confirmado por código y esquema.
-- **FR-009**: La documentación de arquitectura DEBE describir el servidor implementado como módulos JavaScript bajo `server/src/` donde se mezclan registro de rutas, lógica y acceso Prisma; DEBE indicar que `lib/`, `middleware/` y `routes/` están vacías en el estado inspeccionado.
+- **FR-009**: La documentación de arquitectura DEBE describir el servidor actual como un monolito Express compuesto desde `server/src/index.js` mediante funciones `registrarX`, indicando las dependencias de cada firma según el código. Los módulos funcionales combinan, según su responsabilidad, registro de rutas, lógica y acceso Prisma; Google se registra desde identidad. DEBE indicar que `server/src/lib/`, `server/src/middleware/` y `server/src/routes/` están vacías en el estado inspeccionado y citar los módulos ubicados en la raíz de `server/src/`.
 - **FR-010**: Capas separadas, caché y Swagger DEBEN identificarse como objetivos de Sprint 2 o propuestas solo donde las fuentes los sostengan; no pueden presentarse como existentes hoy sin evidencia.
 - **FR-011**: Los tres documentos de diseño interno DEBEN describir módulos y patrones observados con sus fuentes, y separar claramente los patrones o principios recomendados para futuro.
 - **FR-012**: Los cuatro documentos C4 DEBEN contener un diagrama Mermaid del nivel correspondiente (contexto, contenedores, componentes y código), una leyenda o explicación de sus límites y referencias a las fuentes usadas.
 - **FR-013**: Cada componente de software documentado o representado DEBE indicar su RF, HU o escenario de origen; si no tiene un origen funcional directo, DEBE citar el artefacto o archivo que acredita su existencia.
 - **FR-014**: La entrega DEBE limitar cambios a documentación y artefactos Spec Kit de esta funcionalidad; no DEBE modificar archivos de `client/` ni `server/`.
 - **FR-015**: Cada documento DEBE incluir un resumen claro en español para lectores no especializados; los términos técnicos y acrónimos DEBEN explicarse en su primera aparición o en un glosario compartido. Los diagramas técnicos DEBEN acompañarse de una explicación textual.
+- **FR-016**: La documentación funcional y de arquitectura DEBE inventariar los métodos y rutas efectivamente declarados en `server/src/`, componiendo prefijos de router con rutas internas y citando el archivo fuente. El inventario observado incluye: `server/src/catalogo-grados.js`: GET `/api/catalogo-grados/:tramite`, GET `/api/catalogo-grados/:tramite/:programaId`; `server/src/identidad.js`: POST `/api/auth/login`, POST `/api/auth/logout`, GET `/api/auth/perfil`; `server/src/identidad-google.js`: GET `/api/auth/google/estado`, GET `/api/auth/google/iniciar`, GET `/api/auth/google/callback`; `server/src/solicitudes.js` (prefijo `/api/solicitudes`): GET `/`, POST `/`, POST `/:id/presentar`, PUT `/:id/documentos/:plantilla`, POST `/:id/subsanar`, GET `/:id/documentos/:documento`; `server/src/revision-grados.js` (prefijo `/api/revision-grados`): GET `/`, GET `/reporte`, GET `/:id/documentos/:documento`, POST `/:id/acciones`; `server/src/administracion.js` (prefijo `/api/administracion`): GET `/configuracion`, GET y POST `/programas`, GET `/estudiantes`, GET y POST `/usuarios`, GET y POST `/requisitos`, GET `/auditoria`; `server/src/verificacion-documentos.js`: GET `/api/documentos/verificar-qr/:codigo`. Las rutas locales se documentan junto con el prefijo resultante.
+- **FR-017**: El motor y almacenamiento observados DEBEN describirse como SQLite local: `server/prisma/schema.prisma` declara `provider = "sqlite"`; `server/src/index.js` exige que `DATABASE_URL` comience por `file:` y crea Prisma con `PrismaLibSql` de `@prisma/adapter-libsql`. Debe señalarse como comentario desactualizado la nota inicial del esquema que menciona PostgreSQL; no se debe afirmar que PostgreSQL es el motor actual.
 
 ### Entidades clave
 
