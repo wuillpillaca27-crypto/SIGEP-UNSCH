@@ -18,7 +18,7 @@ Antes de migrar las pruebas, tras instalar Jest, correr un smoke test aislado qu
 
 **Almacenamiento**: Bases SQLite locales efímeras por prueba/suite, conectadas mediante Prisma 7 y `@prisma/adapter-libsql`; sin cambio de esquema de producto. `node:sqlite` se usa para crear fixtures solo si pasa el gate Jest.
 
-**Pruebas**: Jest en entorno `node`; script `npm test` ejecuta exactamente `jest --coverage`. Configuración de Jest en `server/package.json`: `verbose`, `testEnvironment: node`, `coverageDirectory: coverage`, reporters `text`, `html`, `lcov`, e inclusión de módulos `src/**/*.js` excluyendo pruebas. No definir `coverageThreshold`.
+**Pruebas**: Jest en entorno `node`; script `npm test` ejecuta exactamente `jest --coverage`. Configuración en `server/jest.config.js`: `verbose`, `testEnvironment: node`, `coverageDirectory: coverage`, reporters `text`, `html`, `lcov`, e inclusión de módulos `src/**/*.js` excluyendo pruebas. No definir `coverageThreshold`.
 
 **Plataforma objetivo**: Desarrollo local y CI del servidor en Node; el repositorio se trabaja en Windows y usa npm.
 
@@ -26,7 +26,7 @@ Antes de migrar las pruebas, tras instalar Jest, correr un smoke test aislado qu
 
 **Objetivos de rendimiento**: No aplica como SLO del producto. La suite debe terminar y limpiar recursos efímeros; no se establece umbral de cobertura ni objetivo temporal nuevo.
 
-**Restricciones**: No modificar código de producción en `server/src/` ni archivos de `client/`. En `server/package.json`, cambiar solo el campo del script `test` entre los scripts existentes; conservar `start`, `local`, `db:init` y `db:generate`. La adición de Jest actualizará `devDependencies` y `server/package-lock.json`; no habrá otra dependencia nueva. No guardar secretos ni usar `.env`. Mantener SQLite real, Express y puerto aleatorio; reportar hallazgos sin corregirlos. Añadir `server/coverage/` al `.gitignore` raíz.
+**Restricciones**: No modificar código de producción en `server/src/` ni archivos de `client/`. En `server/package.json`, cambiar solo `devDependencies.jest` y el campo del script `test`; conservar `start`, `local`, `db:init` y `db:generate`. La adición de Jest actualizará `devDependencies` y `server/package-lock.json`; no habrá otra dependencia nueva. No guardar secretos ni usar `.env`. Mantener SQLite real, Express y puerto aleatorio; reportar hallazgos sin corregirlos. Añadir `server/coverage/` al `.gitignore` raíz.
 
 **Alcance**: Suite migrada de `server/src/solicitudes.test.js` y `catalogo-grados.test.js`, dividida y con todas las comprobaciones S-01–S-57/C-01–C-07 preservadas; cobertura nueva para revisión P2–P3, administración P4 e identidad P5. Los archivos de prueba se ubicarán en `server/tests/` para nuevos casos y los dos archivos existentes se mantendrán junto a sus módulos durante la migración, salvo que una necesidad técnica demostrada requiera moverlos. Contratos públicos y producción no cambian.
 
@@ -68,20 +68,23 @@ specs/009-pruebas-servidor-jest/
 ```text
 .gitignore                                      # ignorar server/coverage/
 server/
-├── package.json                                # editar solo devDependency jest y script test, además de configuración Jest
+├── package.json                                # agregar solo devDependency jest y cambiar solo script test
 ├── package-lock.json                           # resolver Jest como única dependencia nueva
+├── jest.config.js                              # cobertura, reporters y entorno node
+├── tests/                                      # smoke Jest/SQLite temporal, se elimina al terminar
 ├── src/
 │   ├── solicitudes.test.js                     # migrar a Jest y dividir casos
 │   ├── catalogo-grados.test.js                  # migrar a Jest; conservar aserciones
-│   ├── revision-grados.test.js                  # pruebas P2/P3
+│   ├── revision-grados-listado.test.js           # pruebas P2
+│   ├── revision-grados-acciones.test.js          # pruebas P3
 │   ├── administracion.test.js                   # pruebas P4
 │   └── identidad.test.js                        # pruebas P5
 └── coverage/                                    # salida generada, ignorada por Git
 ```
 
-Los nuevos casos podrán agruparse bajo `server/tests/` si facilita fixtures compartidos. La decisión final se toma en tasks; en ambos casos los archivos permanecen dentro de `server/`. No se reescriben módulos `registrarX`.
+Los casos nuevos P2–P5 se ubican como archivos separados junto a los módulos bajo `server/src/`; el smoke temporal se ejecuta en `server/tests/` y se elimina al terminar. No se reescriben módulos `registrarX`.
 
-**Decisión de estructura**: Mantener los dos test files existentes junto a los módulos evita cambios de ruta innecesarios y conserva el punto de referencia del inventario. Agregar pruebas de módulos vecinos en `server/src/` o usar `server/tests/` para helpers/casos nuevos; Jest detecta ambos patrones por defecto. Evitar helpers productivos compartidos; el setup reutilizable, si existe, será solo de pruebas.
+**Decisión de estructura**: Mantener `solicitudes.test.js` y `catalogo-grados.test.js` junto a sus módulos. Crear un archivo independiente por historia/área bajo `server/src/`: `revision-grados-listado.test.js`, `revision-grados-acciones.test.js`, `administracion.test.js` e `identidad.test.js`. El smoke test temporal se ubicará en `server/tests/` y se eliminará tras comprobar compatibilidad. No se crean helpers productivos compartidos.
 
 ## Fase 0: Investigación
 

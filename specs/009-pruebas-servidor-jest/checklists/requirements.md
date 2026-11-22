@@ -31,4 +31,4 @@
 
 ## Notas
 
-La planificación debe inspeccionar código y pruebas existentes para fijar cada resultado esperado. La especificación registra hechos observados, aserciones a preservar, la limitación de no haber podido ejecutar Jest en el Node instalado y hallazgos que no deben corregirse en este alcance.
+La planificación inspeccionó código y pruebas existentes; Node v24.16.0 con Jest 30.5.2 aprobó el smoke test de `node:sqlite`. La especificación registra hechos observados, aserciones a preservar y hallazgos que no deben corregirse en este alcance.

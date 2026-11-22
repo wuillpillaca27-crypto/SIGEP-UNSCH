@@ -43,7 +43,7 @@ En instalación de desarrollo sin lock actualizado todavía, `npm install` se us
 2. Verificar que el escenario monolítico de solicitudes se dividió en casos independientes y que permanecen las comprobaciones concurrentes como un caso explícito.
 3. Revisar filtros, paginación, transiciones, errores, roles, cookies y operaciones administrativas contra el código actual, registrando diferencias como hallazgos.
 4. Revisar el reporte de cobertura como línea base; no fijar ni inferir umbral.
-5. Revisar `git diff`: `server/package.json` cambia solo `devDependencies.jest`, configuración Jest y `scripts.test`; `server/package-lock.json` incorpora Jest; `.gitignore` incluye `server/coverage/`; pruebas nuevas/migradas solo están bajo `server/`. No debe haber diffs en código de producción de `server/` ni en `client/`.
+5. Revisar `git diff`: `server/package.json` cambia solo `devDependencies.jest` y `scripts.test`; `server/jest.config.js` guarda la configuración; `server/package-lock.json` incorpora Jest; `.gitignore` incluye `server/coverage/`; pruebas nuevas/migradas solo están bajo `server/`. No debe haber diffs en código de producción de `server/` ni en `client/`.
 
 ## Fuente de endpoints
 

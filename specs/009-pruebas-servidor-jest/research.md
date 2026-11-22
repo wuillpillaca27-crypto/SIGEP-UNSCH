@@ -8,7 +8,7 @@
 
 ## Decisión: configuración de reporters y cobertura
 
-- **Decisión**: En la configuración Jest ubicada dentro de `server/package.json`, fijar `coverageReporters: ["text", "html", "lcov"]`, `coverageDirectory: "coverage"`, `verbose: true`, `testEnvironment: "node"` y `collectCoverageFrom` para módulos `src/**/*.js` excluyendo `.test.js`. Mantener el script `test` exactamente como `jest --coverage` y no declarar `coverageThreshold`.
+- **Decisión**: En `server/jest.config.js`, fijar `coverageReporters: ["text", "html", "lcov"]`, `coverageDirectory: "coverage"`, `verbose: true`, `testEnvironment: "node"` y `collectCoverageFrom` para módulos `src/**/*.js` excluyendo `.test.js`. Mantener el script `test` exactamente como `jest --coverage` y no declarar `coverageThreshold`.
 - **Justificación**: La documentación oficial especifica `coverageReporters`, `coverageDirectory` y aclara que el umbral es opcional; al establecer reporters explícitos se incluyen el resumen de texto y los archivos HTML/lcov requeridos. Referencias: [Jest Configuration](https://jestjs.io/docs/configuration), [Jest CLI](https://jestjs.io/docs/cli).
 - **Ignorado de artefactos**: Añadir `server/coverage/` a `.gitignore` raíz; el reporte se inspecciona localmente y no forma parte de cambios versionados.
 
@@ -23,7 +23,7 @@
 ## Decisión: organización y aislamiento de pruebas
 
 - **Decisión**: Dejar inicialmente `solicitudes.test.js` y `catalogo-grados.test.js` junto a sus módulos; crear las nuevas suites junto a módulos o en `server/tests/`. Preferir `server/tests/` para helpers reutilizables si se necesita setup común. Cada caso de integración debe obtener base y directorio de archivos propios, Express en puerto `0`, y cleanup en `afterEach`/`afterAll` equivalente.
-- **Justificación**: Los casos independientes no deben depender del orden ni compartir estados mutables. La prueba de carreras del legacy conserva su `Promise.all` como un caso explícito. Los archivos actuales ya usan API HTTP real, Prisma/libSQL y SQLite temporal.
+- **Justificación**: Los casos independientes no deben depender del orden ni compartir estados mutables. La prueba de carreras del legacy conserva su `Promise.all` como un caso explícito. Los archivos actuales ya usan API HTTP real, Prisma/libSQL y SQLite temporal. Cada historia tendrá su propio archivo de prueba para que una tarea corresponda a un archivo y no haya colisiones.
 - **Límite**: No modificar `server/src/*.js` de producción ni `client/`; los cambios en `package.json` son configuración de test, y de los scripts solo cambia `test`.
 
 ## Fuentes de comportamiento
