@@ -12,7 +12,7 @@ const express = require("express");
 const { registrarIdentidad } = require("./identidad");
 const { registrarRevision } = require("./revision-grados");
 
-jest.setTimeout(120000);
+jest.setTimeout(30000);
 
 async function crearContexto() {
   const directorio = await mkdtemp(join(tmpdir(), "sigep-revision-listado-"));
@@ -102,15 +102,10 @@ async function crearContexto() {
 
 describe("Listados y reporte de revisión", () => {
   let ctx;
-  afterEach(async () => {
-    if (ctx) {
-      await ctx.cerrar();
-      ctx = undefined;
-    }
-  }, 120000);
+  beforeAll(async () => { ctx = await crearContexto(); }, 60000);
+  afterAll(async () => { if (ctx) await ctx.cerrar(); });
 
   test("filtra por tipos reconocidos y estado, e ignora parámetros no válidos", async () => {
-    ctx = await crearContexto();
     const operador = await ctx.token(1);
     const filtrado = await ctx.pedir("/revision-grados?tipos=grado_doctor,desconocido&estado=en_revision", operador);
     expect(filtrado.status).toBe(200);
@@ -127,7 +122,6 @@ describe("Listados y reporte de revisión", () => {
     ["nombres", "buscar=Carla", "BUSCAR-CODIGO"],
     ["apellidos", "buscar=Estudiante", "BUSCAR-CODIGO"],
   ])("busca expedientes por %s", async (_campo, query, esperado) => {
-    ctx = await crearContexto();
     const operador = await ctx.token(1);
     const resultado = await ctx.pedir(`/revision-grados?${query}`, operador);
     expect(resultado.status).toBe(200);
@@ -135,7 +129,6 @@ describe("Listados y reporte de revisión", () => {
   });
 
   test("devuelve hasta 20 de 21, indica la siguiente página y normaliza límites", async () => {
-    ctx = await crearContexto();
     const operador = await ctx.token(1);
     const primera = await ctx.pedir("/revision-grados?pagina=1", operador);
     expect(primera.body.datos).toHaveLength(20);
@@ -152,7 +145,6 @@ describe("Listados y reporte de revisión", () => {
   });
 
   test("restringe listado y reporte al personal y habilita aprobar solo al administrador", async () => {
-    ctx = await crearContexto();
     const admin = await ctx.token(2);
     const estudiante = await ctx.token(3);
     const listado = await ctx.pedir("/revision-grados", admin);
@@ -165,7 +157,6 @@ describe("Listados y reporte de revisión", () => {
   });
 
   test("agrupa totales por tipo de trámite y estado de las filas presentadas", async () => {
-    ctx = await crearContexto();
     const admin = await ctx.token(2);
     const reporte = await ctx.pedir("/revision-grados/reporte", admin);
     expect(reporte.status).toBe(200);
