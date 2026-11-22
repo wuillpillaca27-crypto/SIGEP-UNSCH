@@ -1,4 +1,4 @@
-﻿# Tareas: Pruebas automatizadas del servidor con Jest
+# Tareas: Pruebas automatizadas del servidor con Jest
 
 **Entrada**: documentos de diseÃ±o en `specs/009-pruebas-servidor-jest/`.
 
@@ -55,7 +55,7 @@
 
 **Prueba independiente**: ejecutar la suite P3 contra Express/SQLite temporal y contrastar tanto respuesta como datos persistidos.
 
-- [ ] T008 [US3] Crear `server/src/revision-grados-acciones.test.js` para POST `/api/revision-grados/:id/acciones` y descarga de documentos: comprobar transiciones vÃ¡lidas e invÃ¡lidas de revisar/observar/validar/aprobar/emitir; ID no entero, acciÃ³n/datos invÃ¡lidos y comentario mayor de 1500 con sus errores actuales; aprobaciÃ³n bloqueada por requisitos obligatorios faltantes; aprobar y emitir solo por administrador; ruta de documento invÃ¡lida; conflicto concurrente 409 y efectos en historial, revisiÃ³n y auditorÃ­a. Registrar entradas no validadas como hallazgos sin cambiar producciÃ³n. Aplicar `data-model.md`: `Caso de prueba.Nombre`, `Caso de prueba.PreparaciÃ³n`, `Caso de prueba.AcciÃ³n`, `Caso de prueba.Resultado esperado`, `Caso de prueba.Limpieza`, `Base SQLite temporal.Archivo`, `Base SQLite temporal.Semillas`, `Base SQLite temporal.ConexiÃ³n de aplicaciÃ³n`, `Servidor Express temporal.AplicaciÃ³n`, `Servidor Express temporal.Puerto`, `Servidor Express temporal.Cliente HTTP`, `Servidor Express temporal.AutenticaciÃ³n`, `Servidor Express temporal.Cierre`, `Hallazgo`.
+- [X] T008 [US3] Crear `server/src/revision-grados-acciones.test.js` para POST `/api/revision-grados/:id/acciones` y descarga de documentos: comprobar transiciones vÃ¡lidas e invÃ¡lidas de revisar/observar/validar/aprobar/emitir; ID no entero, acciÃ³n/datos invÃ¡lidos y comentario mayor de 1500 con sus errores actuales; aprobaciÃ³n bloqueada por requisitos obligatorios faltantes; aprobar y emitir solo por administrador; ruta de documento invÃ¡lida; conflicto concurrente 409 y efectos en historial, revisiÃ³n y auditorÃ­a. Registrar entradas no validadas como hallazgos sin cambiar producciÃ³n. Aplicar `data-model.md`: `Caso de prueba.Nombre`, `Caso de prueba.PreparaciÃ³n`, `Caso de prueba.AcciÃ³n`, `Caso de prueba.Resultado esperado`, `Caso de prueba.Limpieza`, `Base SQLite temporal.Archivo`, `Base SQLite temporal.Semillas`, `Base SQLite temporal.ConexiÃ³n de aplicaciÃ³n`, `Servidor Express temporal.AplicaciÃ³n`, `Servidor Express temporal.Puerto`, `Servidor Express temporal.Cliente HTTP`, `Servidor Express temporal.AutenticaciÃ³n`, `Servidor Express temporal.Cierre`, `Hallazgo`.
 
 ---
 
