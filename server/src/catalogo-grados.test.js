@@ -4,14 +4,23 @@ const { once } = require("node:events");
 const { tmpdir } = require("node:os");
 const { join } = require("node:path");
 const { DatabaseSync } = require("node:sqlite");
-const { test } = require("node:test");
 const { pathToFileURL } = require("node:url");
 const { PrismaClient } = require("@prisma/client");
 const { PrismaLibSql } = require("@prisma/adapter-libsql");
 const express = require("express");
 const { leerNormativa, registrarCatalogo } = require("./catalogo-grados");
 
-test("el catálogo público filtra programas y requisitos en SQLite", async (t) => {
+jest.setTimeout(30000);
+
+let limpiar;
+afterEach(async () => {
+  if (limpiar) {
+    await limpiar();
+    limpiar = undefined;
+  }
+});
+
+test("C-01 a C-07: el catálogo público filtra programas y requisitos en SQLite", async () => {
   const directorio = await mkdtemp(join(tmpdir(), "sigep-catalogo-"));
   const archivo = join(directorio, "catalogo.sqlite");
   const base = new DatabaseSync(archivo);
@@ -38,21 +47,22 @@ test("el catálogo público filtra programas y requisitos en SQLite", async (t) 
   ]));
   registrarCatalogo(app, prisma, normativa);
   const servidor = app.listen(0, "127.0.0.1");
-  t.after(async () => {
-    await new Promise((resolve) => servidor.close(resolve));
+  limpiar = async () => {
+    servidor.closeAllConnections();
+    servidor.close();
     await prisma.$disconnect();
-    await rm(directorio, { recursive: true, maxRetries: 5, retryDelay: 100 });
-  });
+    await rm(directorio, { recursive: true, maxRetries: 24, retryDelay: 250 });
+  };
   await once(servidor, "listening");
   const url = `http://127.0.0.1:${servidor.address().port}/api/catalogo-grados`;
 
   const listado = await fetch(`${url}/grado_doctor`);
   assert.equal(listado.status, 200);
-  assert.deepEqual(await listado.json(), { datos: [{ id: 1, nombre: "Programa de prueba" }] });
+  expect(await listado.json()).toEqual({ datos: [{ id: 1, nombre: "Programa de prueba" }] });
 
   const detalle = await fetch(`${url}/grado_doctor/1`);
   assert.equal(detalle.status, 200);
-  assert.deepEqual(await detalle.json(), {
+  expect(await detalle.json()).toEqual({
     requisitos: [{
       id: 1, nombre: "Plantilla de prueba", descripcion: "Texto de prueba",
       tipo: "documental", obligatorio: true, versionNorm: "v-prueba",

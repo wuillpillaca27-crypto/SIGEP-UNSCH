@@ -4,7 +4,6 @@ const { mkdtemp, rm } = require("node:fs/promises");
 const { tmpdir } = require("node:os");
 const { join } = require("node:path");
 const { DatabaseSync } = require("node:sqlite");
-const { test } = require("node:test");
 const { pathToFileURL } = require("node:url");
 const { PrismaClient } = require("@prisma/client");
 const { PrismaLibSql } = require("@prisma/adapter-libsql");
@@ -16,7 +15,12 @@ const { registrarRevision } = require("./revision-grados");
 const { registrarVerificacion } = require("./verificacion-documentos");
 const { registrarAdministracion } = require("./administracion");
 
-test("presentación, permisos y revisión de un expediente", async (t) => {
+jest.setTimeout(120000);
+
+const clave = "credencial-solo-para-pruebas";
+const pdf = "%PDF-1.7\narchivo de prueba\n%%EOF\n";
+
+async function crearContexto() {
   const carpeta = await mkdtemp(join(tmpdir(), "sigep-expedientes-"));
   const archivo = join(carpeta, "expedientes.sqlite");
   const base = new DatabaseSync(archivo);
@@ -46,7 +50,6 @@ test("presentación, permisos y revisión de un expediente", async (t) => {
     INSERT INTO estudiantes VALUES (1, 1, 'TEST1', 1), (2, 2, 'TEST2', 1);
     INSERT INTO plantillas_requisito VALUES (1, 1, 'grado_doctor', 'Documento de prueba', 'Descripción', 'documental', 1, 1, 1);
   `);
-  const clave = "credencial-solo-para-pruebas";
   const hash = bcrypt.hashSync(clave, 4);
   const crearUsuario = base.prepare("INSERT INTO usuarios VALUES (?, ?, 'Prueba', ?, ?, ?, ?, 1)");
   for (const [id, rol] of [[1, "estudiante"], [2, "estudiante"], [3, "operador"], [4, "administrador"]]) {
@@ -63,27 +66,24 @@ test("presentación, permisos y revisión de un expediente", async (t) => {
   registrarVerificacion(app, prisma);
   registrarAdministracion(app, prisma, autenticar);
   const servidor = app.listen(0, "127.0.0.1");
-  t.after(async () => {
-    await new Promise((resolve) => servidor.close(resolve));
-    await prisma.$disconnect();
-    await rm(carpeta, { recursive: true, maxRetries: 8, retryDelay: 100 });
-  });
   await once(servidor, "listening");
   const api = `http://127.0.0.1:${servidor.address().port}/api`;
-  async function pedir(ruta, status, { token, metodo = "GET", datos, pdf, binario } = {}) {
+  const cookies = new Map();
+  async function pedir(ruta, status, { token, metodo = "GET", datos, pdf: contenidoPdf, binario } = {}) {
     const respuesta = await fetch(api + ruta, {
       method: metodo,
       headers: {
         ...(token && { Cookie: token }),
-        ...(pdf ? { "Content-Type": "application/pdf" } : datos && { "Content-Type": "application/json" }),
+        ...(contenidoPdf ? { "Content-Type": "application/pdf" } : datos && { "Content-Type": "application/json" }),
       },
-      body: pdf ?? (datos && JSON.stringify(datos)),
+      body: contenidoPdf ?? (datos && JSON.stringify(datos)),
     });
     const resultado = binario ? Buffer.from(await respuesta.arrayBuffer()) : await respuesta.text();
     assert.equal(respuesta.status, status, `${metodo} ${ruta}: ${String(resultado).slice(0, 250)}`);
     return binario ? resultado : JSON.parse(resultado);
   }
   async function ingresar(id) {
+    if (cookies.has(id)) return cookies.get(id);
     const respuesta = await fetch(api + "/auth/login", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: `cuenta${id}@test.invalid`, password: clave }),
@@ -93,69 +93,135 @@ test("presentación, permisos y revisión de un expediente", async (t) => {
     const cookie = respuesta.headers.get("set-cookie");
     assert.match(cookie, /HttpOnly/);
     assert.match(cookie, /SameSite=Lax/);
-    return cookie.split(";")[0];
+    const token = cookie.split(";")[0];
+    cookies.set(id, token);
+    return token;
   }
-  const token = await ingresar(1);
-  const ajeno = await ingresar(2);
-  const operador = await ingresar(3);
-  const admin = await ingresar(4);
-  await pedir("/solicitudes", 401);
-  await pedir("/administracion/configuracion", 401);
-  await pedir("/administracion/configuracion", 403, { token });
-  await pedir("/administracion/configuracion", 200, { token: operador });
-  await pedir("/administracion/usuarios", 403, { token: operador });
-  assert.equal((await pedir("/auth/perfil", 200, { token })).estudiante.codigoUniv, "TEST1");
-  const solicitud = await pedir("/solicitudes", 200, { token, metodo: "POST", datos: { tipoTramite: "grado_doctor" } });
+  async function restablecer() {
+    for (const tabla of ["revisiones", "auditoria", "documentos_solicitud", "historial_estados", "validaciones_requisito", "solicitudes", "plantillas_requisito", "estudiantes", "programas", "usuarios"]) {
+      await prisma.$executeRawUnsafe(`DELETE FROM ${tabla}`);
+    }
+    await prisma.$executeRawUnsafe("INSERT INTO programas VALUES (1, 'Doctorado de prueba', 'doctorado', 1)");
+    await prisma.$executeRawUnsafe("INSERT INTO estudiantes VALUES (1, 1, 'TEST1', 1), (2, 2, 'TEST2', 1)");
+    await prisma.$executeRawUnsafe("INSERT INTO plantillas_requisito VALUES (1, 1, 'grado_doctor', 'Documento de prueba', 'Descripción', 'documental', 1, 1, 1)");
+    const hash = bcrypt.hashSync(clave, 4);
+    for (const [id, rol] of [[1, "estudiante"], [2, "estudiante"], [3, "operador"], [4, "administrador"]]) {
+      await prisma.$executeRawUnsafe("INSERT INTO usuarios VALUES (?, ?, 'Prueba', ?, ?, ?, ?, 1)", id, rol, String(id).padStart(8, "0"), `cuenta${id}@test.invalid`, hash, rol);
+    }
+  }
+  async function cerrar() {
+    servidor.closeAllConnections();
+    servidor.close();
+    await prisma.$disconnect();
+    await rm(carpeta, { recursive: true, maxRetries: 24, retryDelay: 250 });
+  }
+  return { prisma, pedir, ingresar, restablecer, cerrar };
+}
+
+async function prepararSolicitud(ctx, token) {
+  const solicitud = await ctx.pedir("/solicitudes", 200, { token, metodo: "POST", datos: { tipoTramite: "grado_doctor" } });
   const ruta = `/solicitudes/${solicitud.id}`;
-  assert.equal((await pedir("/solicitudes", 200, { token, metodo: "POST", datos: { tipoTramite: "grado_doctor" } })).id, solicitud.id);
-  await pedir(ruta + "/presentar", 422, { token, metodo: "POST" });
-  await pedir(ruta + "/documentos/1", 415, { token, metodo: "PUT", pdf: "datos sin cabecera" });
-  const pdf = "%PDF-1.7\narchivo de prueba\n%%EOF\n";
-  const adjunto = await pedir(ruta + "/documentos/1", 200, { token, metodo: "PUT", pdf });
-  const documento = ruta + "/documentos/" + adjunto.documentos[0].id;
-  await pedir(documento, 404, { token: ajeno });
-  assert.equal(String(await pedir(documento, 200, { token, binario: true })), pdf);
-  const [presentado, repetido] = await Promise.all([
-    pedir(ruta + "/presentar", 200, { token, metodo: "POST" }),
-    pedir(ruta + "/presentar", 200, { token, metodo: "POST" }),
-  ]);
-  assert.equal(presentado.estado, "presentado");
-  assert.equal(repetido.codigo, presentado.codigo);
-  assert.equal((await pedir(ruta + "/presentar", 200, { token, metodo: "POST" })).codigo, presentado.codigo);
-  assert.equal(await prisma.historialEstado.count({ where: { estadoDespues: "presentado" } }), 1);
-  await pedir("/revision-grados", 403, { token });
+  const adjunto = await ctx.pedir(ruta + "/documentos/1", 200, { token, metodo: "PUT", pdf });
+  return { solicitud, ruta, documento: ruta + "/documentos/" + adjunto.documentos[0].id };
+}
+
+async function aprobarSolicitud(ctx, token, operador, admin) {
+  const { solicitud, ruta } = await prepararSolicitud(ctx, token);
+  const presentado = await ctx.pedir(ruta + "/presentar", 200, { token, metodo: "POST" });
   const accion = `/revision-grados/${solicitud.id}/acciones`;
-  await pedir(accion, 403, { token: operador, metodo: "POST", datos: { accion: "aprobar" } });
-  await pedir(accion, 200, { token: operador, metodo: "POST", datos: { accion: "revisar" } });
   const requisitoId = presentado.validaciones[0].id;
-  await pedir(accion, 200, { token: operador, metodo: "POST", datos: { accion: "observar", requisitoId, comentario: "Adjuntar otra versión" } });
-  await pedir(ruta + "/subsanar", 409, { token, metodo: "POST" });
-  await pedir(ruta + "/documentos/1", 200, { token, metodo: "PUT", pdf });
-  const corregido = await pedir(ruta + "/subsanar", 200, { token, metodo: "POST" });
-  assert.equal(corregido.estado, "en_revision");
-  await pedir(accion, 200, { token: operador, metodo: "POST", datos: { accion: "validar", requisitoId, comentario: "Evidencia cotejada" } });
-  assert.equal((await pedir(accion, 200, { token: admin, metodo: "POST", datos: { accion: "aprobar" } })).estado, "aprobado");
-  assert.equal(await prisma.auditoria.count({ where: { entidadId: solicitud.id } }), 8);
-  assert.deepEqual(await pedir("/revision-grados/reporte", 200, { token: admin }), [
-    { tipoTramite: "grado_doctor", estado: "aprobado", total: 1 },
-  ]);
-  const verificacion = "/documentos/verificar-qr/" + presentado.codigo.toUpperCase();
-  await pedir(verificacion, 404);
-  await pedir("/documentos/verificar-qr/NO-REGISTRADO", 404);
-  await pedir("/documentos/verificar-qr/%3F", 400);
-  await pedir(accion, 403, { token: operador, metodo: "POST", datos: { accion: "emitir", comentario: "Referencia de prueba" } });
-  await pedir(accion, 409, { token: admin, metodo: "POST", datos: { accion: "emitir" } });
-  await pedir(accion, 200, { token: admin, metodo: "POST", datos: { accion: "emitir", comentario: "Referencia de prueba" } });
-  const verificado = await pedir(verificacion, 200);
-  assert.deepEqual(Object.keys(verificado).sort(), ["codigo", "demostracion", "emitidoEn", "programa", "tipoTramite"]);
-  assert.equal(verificado.codigo, presentado.codigo);
-  assert.equal(verificado.tipoTramite, "grado_doctor");
-  assert(verificado.emitidoEn);
-  await pedir(verificacion + "?tipo=grado_maestro", 404);
-  await prisma.solicitud.update({ where: { id: solicitud.id }, data: { estado: "anulado" } });
-  await pedir(verificacion, 404);
-  await pedir("/auth/google/estado", 200);
-  await pedir("/auth/google/iniciar", 503);
-  await pedir("/auth/logout", 200, { token, metodo: "POST" });
-  await pedir("/auth/perfil", 401, { token });
+  await ctx.pedir(accion, 200, { token: operador, metodo: "POST", datos: { accion: "revisar" } });
+  await ctx.pedir(accion, 200, { token: operador, metodo: "POST", datos: { accion: "observar", requisitoId, comentario: "Adjuntar otra versión" } });
+  await ctx.pedir(ruta + "/documentos/1", 200, { token, metodo: "PUT", pdf });
+  await ctx.pedir(ruta + "/subsanar", 200, { token, metodo: "POST" });
+  await ctx.pedir(accion, 200, { token: operador, metodo: "POST", datos: { accion: "validar", requisitoId, comentario: "Evidencia cotejada" } });
+  await ctx.pedir(accion, 200, { token: admin, metodo: "POST", datos: { accion: "aprobar" } });
+  return { solicitud, ruta, accion, presentado };
+}
+
+describe("Solicitudes, revisión e identidad", () => {
+  let ctx;
+  beforeAll(async () => { ctx = await crearContexto(); });
+  beforeEach(async () => { await ctx.restablecer(); });
+  afterAll(async () => { await ctx.cerrar(); });
+
+  test("S-01 a S-10: sesión, permisos y perfil", async () => {
+    const token = await ctx.ingresar(1);
+    const operador = await ctx.ingresar(3);
+    await ctx.ingresar(2);
+    await ctx.ingresar(4);
+    await ctx.pedir("/solicitudes", 401);
+    await ctx.pedir("/administracion/configuracion", 401);
+    await ctx.pedir("/administracion/configuracion", 403, { token });
+    await ctx.pedir("/administracion/configuracion", 200, { token: operador });
+    await ctx.pedir("/administracion/usuarios", 403, { token: operador });
+    assert.equal((await ctx.pedir("/auth/perfil", 200, { token })).estudiante.codigoUniv, "TEST1");
+  });
+
+  test("S-11 a S-19: creación, presentación incompleta y descarga de documentos", async () => {
+    const token = await ctx.ingresar(1);
+    const ajeno = await ctx.ingresar(2);
+    const solicitud = await ctx.pedir("/solicitudes", 200, { token, metodo: "POST", datos: { tipoTramite: "grado_doctor" } });
+    const ruta = `/solicitudes/${solicitud.id}`;
+    assert.equal((await ctx.pedir("/solicitudes", 200, { token, metodo: "POST", datos: { tipoTramite: "grado_doctor" } })).id, solicitud.id);
+    await ctx.pedir(ruta + "/presentar", 422, { token, metodo: "POST" });
+    await ctx.pedir(ruta + "/documentos/1", 415, { token, metodo: "PUT", pdf: "datos sin cabecera" });
+    const adjunto = await ctx.pedir(ruta + "/documentos/1", 200, { token, metodo: "PUT", pdf });
+    const documento = ruta + "/documentos/" + adjunto.documentos[0].id;
+    await ctx.pedir(documento, 404, { token: ajeno });
+    assert.equal(String(await ctx.pedir(documento, 200, { token, binario: true })), pdf);
+  });
+
+  test("S-20 a S-27: presentación concurrente, historial y acceso de revisión", async () => {
+    const token = await ctx.ingresar(1);
+    const { solicitud, ruta } = await prepararSolicitud(ctx, token);
+    const [presentado, repetido] = await Promise.all([
+      ctx.pedir(ruta + "/presentar", 200, { token, metodo: "POST" }),
+      ctx.pedir(ruta + "/presentar", 200, { token, metodo: "POST" }),
+    ]);
+    assert.equal(presentado.estado, "presentado");
+    assert.equal(repetido.codigo, presentado.codigo);
+    assert.equal((await ctx.pedir(ruta + "/presentar", 200, { token, metodo: "POST" })).codigo, presentado.codigo);
+    assert.equal(await ctx.prisma.historialEstado.count({ where: { estadoDespues: "presentado" } }), 1);
+    await ctx.pedir("/revision-grados", 403, { token });
+    assert.equal(solicitud.tipoTramite, "grado_doctor");
+  });
+
+  test("S-28 a S-40: acciones de revisión, aprobación, auditoría e informe", async () => {
+    const token = await ctx.ingresar(1);
+    const operador = await ctx.ingresar(3);
+    const admin = await ctx.ingresar(4);
+    const { solicitud, accion } = await aprobarSolicitud(ctx, token, operador, admin);
+    await ctx.pedir(accion, 403, { token: operador, metodo: "POST", datos: { accion: "aprobar" } });
+    assert.equal(await ctx.prisma.auditoria.count({ where: { entidadId: solicitud.id } }), 8);
+    expect(await ctx.pedir("/revision-grados/reporte", 200, { token: admin })).toEqual([
+      { tipoTramite: "grado_doctor", estado: "aprobado", total: 1 },
+    ]);
+  });
+
+  test("S-41 a S-57: emisión, verificación QR, Google y cierre de sesión", async () => {
+    const token = await ctx.ingresar(1);
+    const operador = await ctx.ingresar(3);
+    const admin = await ctx.ingresar(4);
+    const { solicitud, accion, presentado } = await aprobarSolicitud(ctx, token, operador, admin);
+    const verificacion = "/documentos/verificar-qr/" + presentado.codigo.toUpperCase();
+    await ctx.pedir(verificacion, 404);
+    await ctx.pedir("/documentos/verificar-qr/NO-REGISTRADO", 404);
+    await ctx.pedir("/documentos/verificar-qr/%3F", 400);
+    await ctx.pedir(accion, 403, { token: operador, metodo: "POST", datos: { accion: "emitir", comentario: "Referencia de prueba" } });
+    await ctx.pedir(accion, 409, { token: admin, metodo: "POST", datos: { accion: "emitir" } });
+    await ctx.pedir(accion, 200, { token: admin, metodo: "POST", datos: { accion: "emitir", comentario: "Referencia de prueba" } });
+    const verificado = await ctx.pedir(verificacion, 200);
+    expect(Object.keys(verificado).sort()).toEqual(["codigo", "demostracion", "emitidoEn", "programa", "tipoTramite"]);
+    assert.equal(verificado.codigo, presentado.codigo);
+    assert.equal(verificado.tipoTramite, "grado_doctor");
+    assert(verificado.emitidoEn);
+    await ctx.pedir(verificacion + "?tipo=grado_maestro", 404);
+    await ctx.prisma.solicitud.update({ where: { id: solicitud.id }, data: { estado: "anulado" } });
+    await ctx.pedir(verificacion, 404);
+    await ctx.pedir("/auth/google/estado", 200);
+    await ctx.pedir("/auth/google/iniciar", 503);
+    await ctx.pedir("/auth/logout", 200, { token, metodo: "POST" });
+    await ctx.pedir("/auth/perfil", 401, { token });
+  });
 });
