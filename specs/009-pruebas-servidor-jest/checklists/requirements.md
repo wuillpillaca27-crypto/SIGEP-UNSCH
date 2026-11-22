@@ -1,15 +1,15 @@
-# Specification Quality Checklist: Pruebas automatizadas con Jest del servidor
+# Lista de calidad de especificación: Pruebas automatizadas del servidor con Jest
 
-**Purpose**: Validar integridad y calidad de la especificación antes de planificar
-**Created**: 2026-11-21
-**Feature**: [spec.md](../spec.md)
+**Propósito**: Validar integridad y calidad de la especificación antes de planificar
+**Creada**: 2026-11-21
+**Funcionalidad**: [spec.md](../spec.md)
 
 ## Calidad del contenido
 
-- [x] El detalle técnico se limita al stack Jest, SQLite/Prisma/libSQL, Express y cobertura solicitado explícitamente o necesario para hacer verificables los criterios.
-- [x] Enfocada en el valor para el equipo de desarrollo: disponer de una línea base antes de refactorizar.
+- [x] El detalle técnico se limita a Jest, SQLite/Prisma/libSQL, Express y cobertura solicitados o necesarios para hacer verificables los criterios.
+- [x] Enfocada en el valor para el equipo: disponer de una línea base antes de refactorizar.
 - [x] Redactada en español claro para el equipo responsable de mantener y revisar el servidor.
-- [x] Se completaron todas las secciones obligatorias de la plantilla.
+- [x] Se completaron todas las secciones obligatorias.
 
 ## Integridad de requisitos
 
@@ -24,11 +24,11 @@
 
 ## Preparación de la funcionalidad
 
-- [x] Todos los requisitos funcionales tienen criterio comprobable en sus historias o criterios de éxito.
+- [x] Todos los requisitos funcionales tienen criterios comprobables en sus historias o criterios de éxito.
 - [x] Las historias cubren el runner/cobertura y los módulos priorizados de revisión, administración e identidad.
-- [x] Los resultados medibles corresponden al alcance y las restricciones indicadas por el usuario.
+- [x] Los resultados medibles corresponden al alcance y restricciones indicados.
 - [x] Los detalles de implementación incluidos son los solicitados para esta funcionalidad de pruebas; no se agregan decisiones de producción.
 
 ## Notas
 
-La planificación debe inspeccionar código y pruebas existentes para fijar las respuestas esperadas donde la descripción de la feature no determina por sí sola el detalle. Si la implementación actual difiere, registrar la línea base observada sin cambiar producción.
+La planificación debe inspeccionar código y pruebas existentes para fijar cada resultado esperado. La especificación registra hechos observados, aserciones a preservar, la limitación de no haber podido ejecutar Jest en el Node instalado y hallazgos que no deben corregirse en este alcance.
