@@ -44,3 +44,19 @@ La separación futura en módulos de transporte, aplicación/dominio e infraestr
 ## Trazabilidad y fuentes
 
 Historias y requisitos: `specs/001-mis-tramites/spec.md` a `specs/006-banner-autoridades/spec.md`; requisitos derivados: `docs/01-analisis-de-sistema/03-requisitos-funcionales.md`. Evidencia de cliente: archivos bajo `client/app/`. Evidencia de servidor y firmas: `server/src/index.js` y los módulos listados. Modelo: `server/prisma/schema.prisma`.
+
+### Endpoints declarados por módulo (FR-016)
+
+Las rutas locales se muestran junto con su prefijo efectivo cuando el módulo monta un `Router`. Este es el inventario declarado en el estado inspeccionado; no implica que todos los flujos de interfaz estén completados.
+
+| Módulo / registrador | Endpoints observados | Fuente de existencia y origen funcional |
+|---|---|---|
+| `catalogo-grados.js` / `registrarCatalogo(app, prisma, normativa)` | GET `/api/catalogo-grados/:tramite`; GET `/api/catalogo-grados/:tramite/:programaId` | `server/src/catalogo-grados.js`; `specs/001-mis-tramites/spec.md`. |
+| `identidad.js` / `registrarIdentidad(app, prisma, secreto)` | POST `/api/auth/login`; POST `/api/auth/logout`; GET `/api/auth/perfil` | `server/src/identidad.js`; `specs/003-acceso-y-panel/spec.md`, `specs/004-login-institucional/spec.md`. |
+| `identidad-google.js` (registrado desde identidad) | GET `/api/auth/google/estado`; GET `/api/auth/google/iniciar`; GET `/api/auth/google/callback` | `server/src/identidad-google.js`; FR-005 de `specs/004-login-institucional/spec.md`. |
+| `solicitudes.js` / `registrarSolicitudes(app, prisma, autenticar, directorio)` | GET y POST `/api/solicitudes/`; POST `/api/solicitudes/:id/presentar`; PUT `/api/solicitudes/:id/documentos/:plantilla`; POST `/api/solicitudes/:id/subsanar`; GET `/api/solicitudes/:id/documentos/:documento` | `server/src/solicitudes.js`; necesidades 1–5 de `specs/001-mis-tramites/spec.md`. |
+| `revision-grados.js` / `registrarRevision(app, prisma, autenticar, directorio)` | GET `/api/revision-grados/`; GET `/api/revision-grados/reporte`; GET `/api/revision-grados/:id/documentos/:documento`; POST `/api/revision-grados/:id/acciones` | `server/src/revision-grados.js`; FR-002 y FR-004 de `specs/003-acceso-y-panel/spec.md`. |
+| `administracion.js` / `registrarAdministracion(app, prisma, autenticar)` | GET `/api/administracion/configuracion`; GET y POST `/api/administracion/programas`; GET `/api/administracion/estudiantes`; GET y POST `/api/administracion/usuarios`; GET y POST `/api/administracion/requisitos`; GET `/api/administracion/auditoria` | `server/src/administracion.js`; FR-003 y FR-004 de `specs/003-acceso-y-panel/spec.md`. |
+| `verificacion-documentos.js` / `registrarVerificacion(app, prisma, opciones)` | GET `/api/documentos/verificar-qr/:codigo` | `server/src/verificacion-documentos.js`; FR-001–FR-004 de `specs/002-verificar-documento/spec.md`. |
+
+`server/src/index.js` acredita el orden de montaje y las dependencias de cada firma. `registrarIdentidad` devuelve `autenticar`; Google se monta desde identidad y no como registrador independiente del punto de composición. El inventario consolidado se encuentra también en `docs/01-analisis-de-sistema/03-requisitos-funcionales.md`.
