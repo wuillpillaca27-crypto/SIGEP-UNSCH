@@ -44,7 +44,7 @@
 
 **Prueba independiente**: Ejecutar el archivo de utilidades y comprobar resultados válidos, inválidos, desconocidos y límites bajo `America/Lima`.
 
-- [ ] T006 [P] [US2] Crear `client/app/__tests__/lib/utils.test.ts` para `formatearFecha`, `formatearFechaHora`, `infoEstado`, `nombreCompleto` y `truncar`, incluidos los casos límite definidos en `specs/010-migrar-pruebas-frontend-jest/spec.md`.
+- [X] T006 [P] [US2] Crear `client/app/__tests__/lib/utils.test.ts` para `formatearFecha`, `formatearFechaHora`, `infoEstado`, `nombreCompleto` y `truncar`, incluidos los casos límite definidos en `specs/010-migrar-pruebas-frontend-jest/spec.md`.
 
 **Punto de control**: Las utilidades quedan verificadas sin modificar código de producción.
 
