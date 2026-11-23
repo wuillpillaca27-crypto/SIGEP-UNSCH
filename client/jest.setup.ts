@@ -2,7 +2,7 @@ import "@testing-library/jest-dom";
 import { afterAll, afterEach, beforeAll } from "@jest/globals";
 import { TextDecoder, TextEncoder } from "node:util";
 import { ReadableStream, TransformStream, WritableStream } from "node:stream/web";
-import { BroadcastChannel, MessageChannel, MessagePort } from "node:worker_threads";
+import { BroadcastChannel, MessagePort } from "node:worker_threads";
 
 Object.assign(globalThis, {
   TextDecoder,
@@ -10,7 +10,6 @@ Object.assign(globalThis, {
   ReadableStream,
   TransformStream,
   WritableStream,
-  MessageChannel,
   MessagePort,
   BroadcastChannel,
 });

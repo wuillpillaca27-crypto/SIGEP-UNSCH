@@ -86,9 +86,9 @@
 
 **Prueba independiente**: Ejecutar cada hook con renderizado de hooks, temporizadores controlados y solicitudes resueltas en distintos órdenes.
 
-- [ ] T015 [P] [US5] Crear `client/app/__tests__/hooks/usePaginacion.test.tsx` para valores iniciales, `porPagina`, asignación directa de `irA` y reinicio según `client/app/hooks/usePaginacion.ts`.
-- [ ] T016 [P] [US5] Crear `client/app/__tests__/hooks/useBuscar.test.tsx` para actualización síncrona de texto, debounce de 300 ms y espera personalizada según `client/app/hooks/useBuscar.ts`.
-- [ ] T017 [P] [US5] Crear `client/app/__tests__/hooks/useFetch.test.tsx` para estado inicial, éxito, error, recarga, solicitudes obsoletas y desmontaje según `client/app/hooks/useFetch.ts`.
+- [X] T015 [P] [US5] Crear `client/app/__tests__/hooks/usePaginacion.test.tsx` para valores iniciales, `porPagina`, asignación directa de `irA` y reinicio según `client/app/hooks/usePaginacion.ts`.
+- [X] T016 [P] [US5] Crear `client/app/__tests__/hooks/useBuscar.test.tsx` para actualización síncrona de texto, debounce de 300 ms y espera personalizada según `client/app/hooks/useBuscar.ts`.
+- [X] T017 [P] [US5] Crear `client/app/__tests__/hooks/useFetch.test.tsx` para estado inicial, éxito, error, recarga, solicitudes obsoletas y desmontaje según `client/app/hooks/useFetch.ts`.
 
 **Punto de control**: Los hooks quedan caracterizados sin corregir discrepancias del comportamiento productivo.
 
