@@ -7,7 +7,7 @@
 ## Calidad del contenido
 
 - [X] Los detalles técnicos se limitan a restricciones explícitas de la migración; no se prescribe lógica de negocio nueva.
-- [X] Se centra en continuidad de datos, integridad de expedientes y crecimiento institucional.
+- [ ] Se centra en continuidad de datos, integridad de expedientes y crecimiento institucional.
 - [X] Está redactada para responsables funcionales y técnicos.
 - [X] Todas las secciones obligatorias están completadas.
 
@@ -18,15 +18,15 @@
 - [X] Los criterios de éxito son medibles.
 - [X] Los criterios de éxito describen resultados de datos/operación verificables.
 - [X] Todas las historias incluyen escenarios de aceptación.
-- [X] Se identifican fallos de configuración, importación, integridad y pruebas.
+- [ ] Se identifican fallos de configuración, importación, integridad y pruebas.
 - [X] El alcance y las exclusiones están delimitados.
 - [X] Las dependencias y antecedentes están identificados.
 
 ## Preparación de la funcionalidad
 
 - [X] Los requisitos funcionales tienen resultados de aceptación asociados.
-- [X] Las historias cubren arranque, preservación, pruebas y documentación.
-- [X] Los resultados definidos se pueden validar con conciliación, suites y revisión documental.
+- [ ] Las historias cubren arranque, preservación, pruebas y documentación.
+- [ ] Los resultados definidos se pueden validar con conciliación, suites y revisión documental.
 - [X] Se protege explícitamente la lógica de negocio y `client/`.
 
 ## Notas
