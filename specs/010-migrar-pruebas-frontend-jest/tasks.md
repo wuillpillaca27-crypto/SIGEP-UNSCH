@@ -100,14 +100,14 @@
 
 **Prueba independiente**: Ejecutar cada archivo de componente en jsdom y comprobar roles, etiquetas, estados y acciones de usuario.
 
-- [ ] T018 [P] [US6] Crear `client/app/__tests__/components/Tabla.test.tsx` para filas, columnas, renderizadores, estado vacío y etiqueta accesible de `client/app/components/ui/Tabla.tsx`.
-- [ ] T019 [P] [US6] Crear `client/app/__tests__/components/Paginacion.test.tsx` para controles, límites deshabilitados y `aria-current` de `client/app/components/ui/Paginacion.tsx`.
-- [ ] T020 [P] [US6] Crear `client/app/__tests__/components/Badge.test.tsx` para etiquetas y clases de estado de `client/app/components/ui/Badge.tsx`.
-- [ ] T021 [P] [US6] Crear `client/app/__tests__/components/Campo.test.tsx` para relación etiqueta/control y mensajes de error de `client/app/components/ui/Campo.tsx`.
-- [ ] T022 [P] [US6] Crear `client/app/__tests__/components/Boton.test.tsx` para variantes, carga, deshabilitado e interacción de `client/app/components/ui/Boton.tsx`.
-- [ ] T023 [P] [US6] Crear `client/app/__tests__/components/Modal.test.tsx` para estados abierto/cerrado, relaciones accesibles y cierre de `client/app/components/ui/Modal.tsx`.
-- [ ] T024 [P] [US6] Crear `client/app/__tests__/components/Alerta.test.tsx` para tipos, clases, contenido y rol de `client/app/components/ui/Alerta.tsx`.
-- [ ] T025 [P] [US6] Crear `client/app/__tests__/components/CargandoSpinner.test.tsx` para texto y estado accesible de `client/app/components/ui/CargandoSpinner.tsx`.
+- [X] T018 [P] [US6] Crear `client/app/__tests__/components/Tabla.test.tsx` para filas, columnas, renderizadores, estado vacío y etiqueta accesible de `client/app/components/ui/Tabla.tsx`.
+- [X] T019 [P] [US6] Crear `client/app/__tests__/components/Paginacion.test.tsx` para controles, límites deshabilitados y `aria-current` de `client/app/components/ui/Paginacion.tsx`.
+- [X] T020 [P] [US6] Crear `client/app/__tests__/components/Badge.test.tsx` para etiquetas y clases de estado de `client/app/components/ui/Badge.tsx`.
+- [X] T021 [P] [US6] Crear `client/app/__tests__/components/Campo.test.tsx` para relación etiqueta/control y mensajes de error de `client/app/components/ui/Campo.tsx`.
+- [X] T022 [P] [US6] Crear `client/app/__tests__/components/Boton.test.tsx` para variantes, carga, deshabilitado e interacción de `client/app/components/ui/Boton.tsx`.
+- [X] T023 [P] [US6] Crear `client/app/__tests__/components/Modal.test.tsx` para estados abierto/cerrado, relaciones accesibles y cierre de `client/app/components/ui/Modal.tsx`.
+- [X] T024 [P] [US6] Crear `client/app/__tests__/components/Alerta.test.tsx` para tipos, clases, contenido y rol de `client/app/components/ui/Alerta.tsx`.
+- [X] T025 [P] [US6] Crear `client/app/__tests__/components/CargandoSpinner.test.tsx` para texto y estado accesible de `client/app/components/ui/CargandoSpinner.tsx`.
 
 **Punto de control**: Los ocho componentes quedan cubiertos en Jest sin modificar su implementación.
 
