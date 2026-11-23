@@ -10,7 +10,7 @@
 
 **Propósito**: Migrar las dependencias y el comando del runner en el frontend.
 
-- [ ] T001 Reemplazar Vitest por Jest 30.5.2 y `jest-environment-jsdom` 30.5.2, actualizar el script `test` y sincronizar el lockfile en `client/package.json` y `client/package-lock.json`; retirar la dependencia directa `jsdom` solo si no tiene otros consumidores en `client/`.
+- [X] T001 Reemplazar Vitest por Jest 30.5.2 y `jest-environment-jsdom` 30.5.2, actualizar el script `test` y sincronizar el lockfile en `client/package.json` y `client/package-lock.json`; retirar la dependencia directa `jsdom` solo si no tiene otros consumidores en `client/`.
 
 ---
 
@@ -18,8 +18,8 @@
 
 **Propósito**: Configurar el runner común que necesitan todas las historias.
 
-- [ ] T002 [P] Crear `client/jest.config.js` con `next/jest`, entorno jsdom, alias `@/*` según `client/tsconfig.json`, `TZ=America/Lima` antes de los workers y cobertura `text`, `html` y `lcov` sin umbral.
-- [ ] T003 [P] Crear `client/jest.setup.ts` para importar `@testing-library/jest-dom` y configurar MSW con `beforeAll`, `afterEach` y `afterAll`; conservar `/coverage` en `client/.gitignore`.
+- [X] T002 [P] Crear `client/jest.config.js` con `next/jest`, entorno jsdom, alias `@/*` según `client/tsconfig.json`, `TZ=America/Lima` antes de los workers y cobertura `text`, `html` y `lcov` sin umbral.
+- [X] T003 [P] Crear `client/jest.setup.ts` para importar `@testing-library/jest-dom` y configurar MSW con `beforeAll`, `afterEach` y `afterAll`; conservar `/coverage` en `client/.gitignore`.
 
 **Punto de control**: Jest carga desde `client/`, resuelve alias y setup, intercepta `fetch` sin servicios reales y genera los formatos de cobertura requeridos.
 
@@ -31,8 +31,8 @@
 
 **Prueba independiente**: Ejecutar `npm test` desde `client/`; confirmar el smoke test, resultado identificable por caso, código 0 al pasar, código distinto de 0 ante una falla y reportes de cobertura. Verificar las aserciones del alias y la zona horaria.
 
-- [ ] T004 [US1] Migrar `client/app/__tests__/lib/runner.test.ts` a Jest, conservando sus comprobaciones del runner, del alias `@/*` y de `America/Lima`.
-- [ ] T005 [US1] Validar el smoke test con Next 16.4.3, React 19.3.0, Jest 30.5.2 y `jest-environment-jsdom` 30.5.2 desde `client/app/__tests__/lib/runner.test.ts`; comprobar el código de salida ante una ejecución correcta y una falla controlada, y resolver cualquier incompatibilidad antes de continuar.
+- [X] T004 [US1] Migrar `client/app/__tests__/lib/runner.test.ts` a Jest, conservando sus comprobaciones del runner, del alias `@/*` y de `America/Lima`.
+- [X] T005 [US1] Validar el smoke test con Next 16.4.3, React 19.3.0, Jest 30.5.2 y `jest-environment-jsdom` 30.5.2 desde `client/app/__tests__/lib/runner.test.ts`; comprobar el código de salida ante una ejecución correcta y una falla controlada, y resolver cualquier incompatibilidad antes de continuar.
 
 **Punto de control**: `npm test` ejecuta el smoke test en Jest y produce cobertura sin depender de `server/`.
 
