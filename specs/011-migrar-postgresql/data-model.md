@@ -32,13 +32,39 @@ Todos los tipos y miembros se conservan exactamente. PostgreSQL almacena estos e
 | `EstadoValidacion` | cumplido, pendiente, observado, en_revision, no_aplica |
 | `AccionRevision` | presentar, iniciar_revision, observar, validar, aprobar, rechazar, solicitar_subsanacion, subsanar, emitir, anular |
 
+## Fuente SQLite, conteos y orden de carga
+
+El archivo de origen es `server/.runtime-local/.sigep-local/grados.sqlite`. Su respaldo previo es `grados.respaldo.sqlite` en la misma carpeta. `db:migrar-datos` recibe la ruta exacta con `--origen` y los adjuntos con `--origen-archivos`; nunca modifica ni borra los originales.
+
+| Orden | Tabla | Filas esperadas |
+|---:|---|---:|
+| 1 | `usuarios` | 7 |
+| 2 | `programas` | 6 |
+| 3 | `estudiantes` | 6 |
+| 4 | `plantillas_requisito` | 6 |
+| 5 | `solicitudes` | 12 |
+| 6 | `validaciones_requisito` | 11 |
+| 7 | `documentos_solicitud` | 17 |
+| 8 | `revisiones` | 34 |
+| 9 | `historial_estados` | 56 |
+| 10 | `auditoria` | 68 |
+
+El orden satisface las dependencias de claves for?neas. El informe compara los conteos esperados, le?dos e insertados y lista cualquier discrepancia.
+
+## Conversiones y archivos
+
+- `activo` y `obligatorio`: SQLite entero `0`/`1` a boolean PostgreSQL `false`/`true`.
+- Fechas que llegan como texto ISO 8601 con zona se convierten a timestamp. Si la columna PostgreSQL no conserva zona, normalizar el instante a UTC antes de retirar el offset.
+- Los 17 documentos viven inicialmente en `server/.runtime-local/.sigep-local/documentos`. El comando verifica los 17 nombres, los copia (sin mover ni borrar) a la carpeta de subidas configurada (`SIGEP_UPLOAD_DIR`; predeterminada `server/uploads/documentos`) y persiste solo el nombre en `rutaArchivo`. Los nombres faltantes se enumeran en el informe.
+- Los IDs se insertan sin regenerarlos; al terminar cada tabla, ajustar su secuencia con `setval` para el m?ximo ID cargado y que el siguiente ID generado no colisione.
+
 ## Reglas de integridad
 
 - Las claves primarias mantienen el tipo entero y generación automática del modelo actual.
 - `Usuario.dni`, `Usuario.email`, `Estudiante.usuarioId`, `Estudiante.codigoUniv`, `PlantillaRequisito.codigo` y `Solicitud.codigo` conservan unicidad.
 - Todas las relaciones declaradas en Prisma se generan como foreign keys PostgreSQL; preservar el nombre de tabla física mediante `@@map`.
 - Defaults, campos opcionales, precisión del promedio, timestamps, y `@updatedAt` se cotejan con el schema y la migración SQL inicial.
-- Los IDs de una base SQLite local no se importan. La carga de 20.000 usuarios usa datos sintéticos y valida las relaciones que cree.
+- La carga de 20.000 usuarios usa datos sintéticos y valida las relaciones que cree; la migración del origen local conserva sus IDs.
 
 ## Aislamiento de pruebas
 

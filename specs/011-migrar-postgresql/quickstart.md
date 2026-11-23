@@ -1,6 +1,6 @@
 # Guía rápida de validación PostgreSQL
 
-Esta guía comprueba el esquema y el servidor localmente, todas las suites de integración, el rechazo de una configuración insegura y la siembra de carga. No contiene secretos reales.
+Esta guía comprueba la inicialización PostgreSQL, la migración del archivo SQLite y 17 documentos, las suites de integración, el rechazo de una configuración insegura y la siembra de carga. No contiene secretos reales.
 
 ## Requisitos
 
@@ -43,7 +43,28 @@ npm run db:generate
 npm start
 ```
 
-**Esperado**: las migraciones pendientes se aplican y la API inicia. Una URL ausente o que no comience por `postgresql://` produce error antes de abrir el servidor. La segunda aplicación de `db:init` no recrea ni duplica objetos. No se prueba contra una base con datos preexistentes no descartables.
+**Esperado**: las migraciones pendientes se aplican y la API inicia. Una URL ausente o que no comience por `postgresql://` produce error antes de abrir el servidor. La segunda aplicación de `db:init` no recrea ni duplica objetos. La base origen y el archivo de respaldo se conservan; la importaci?n se hace despu?s del schema y se valida mediante reconciliaci?n.
+
+## Migrar datos y documentos locales
+
+Crear primero el respaldo junto al origen y confirmar que PostgreSQL ya tiene el esquema inicializado:
+
+```powershell
+Copy-Item server/.runtime-local/.sigep-local/grados.sqlite server/.runtime-local/.sigep-local/grados.respaldo.sqlite
+$env:DATABASE_URL = "postgresql://sigep_migracion:local_migration_only@localhost:5432/sigep_dev"
+Set-Location server
+npm run db:migrar-datos -- --origen .runtime-local/.sigep-local/grados.sqlite --origen-archivos .runtime-local/.sigep-local/documentos --dry-run
+```
+
+**Esperado para `--dry-run`**: el comando lee el origen, valida las conversiones y los conteos esperados y emite el informe, sin escribir en PostgreSQL ni copiar archivos.
+
+```powershell
+npm run db:migrar-datos -- --origen .runtime-local/.sigep-local/grados.sqlite --origen-archivos .runtime-local/.sigep-local/documentos
+```
+
+La carpeta de subidas destino usa `SIGEP_UPLOAD_DIR` si est? configurada y, en caso contrario, `server/uploads/documentos`. **Esperado**: el informe verifica el orden y conteo de las diez tablas, IDs y secuencias; confirma los 17 nombres/copias, reporta faltantes y no modifica `grados.sqlite`, el respaldo ni los originales. En `rutaArchivo` queda solo el nombre.
+
+Conteos esperados: usuarios 7, programas 6, estudiantes 6, plantillas_requisito 6, solicitudes 12, validaciones_requisito 11, documentos_solicitud 17, revisiones 34, historial_estados 56 y auditoria 68. `activo`/`obligatorio` convierten 0/1 a boolean; fechas ISO 8601 con zona se importan como timestamp y se normalizan a UTC si el destino no conserva zona. La operación es idempotente: puede repetirse sin duplicar datos.
 
 ## Rechazo de URL de pruebas no segura
 

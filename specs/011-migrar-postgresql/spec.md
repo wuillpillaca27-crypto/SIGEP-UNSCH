@@ -27,7 +27,25 @@ Como equipo responsable de SIGEP-UNSCH, queremos persistir los datos institucion
 
 ---
 
-### Historia 2 - Ejecutar pruebas Jest del servidor con PostgreSQL (Prioridad: P2)
+### Historia 2 - Trasladar la base local y sus documentos a PostgreSQL (Prioridad: P2)
+
+Como equipo de datos de SIGEP-UNSCH, queremos migrar los registros de `server/.runtime-local/.sigep-local/grados.sqlite` y sus 17 documentos asociados a PostgreSQL, para conservar identificadores, relaciones y archivos durante el cambio de proveedor.
+
+**Por qu? esta prioridad**: La continuidad de los expedientes depende de preservar los IDs, los v?nculos y los archivos documentales del origen real.
+
+**Prueba independiente**: Crear una copia previa `grados.respaldo.sqlite` en la misma carpeta del origen, inicializar PostgreSQL, ejecutar `npm run db:migrar-datos -- --origen <ruta> --origen-archivos <directorio>`, verificar los conteos indicados, los IDs/secuencias y la copia de los 17 archivos; confirmar que los dos directorios originales permanecen intactos.
+
+**Escenarios de aceptaci?n**:
+
+1. **Dado** el origen SQLite y PostgreSQL ya inicializado, **cuando** se ejecuta el script con `--origen`, **entonces** migra en este orden: `usuarios`, `programas`, `estudiantes`, `plantillas_requisito`, `solicitudes`, `validaciones_requisito`, `documentos_solicitud`, `revisiones`, `historial_estados`, `auditoria`.
+2. **Dado** las tablas del origen, **cuando** termina la carga, **entonces** los conteos son: `usuarios` 7, `programas` 6, `estudiantes` 6, `plantillas_requisito` 6, `solicitudes` 12, `validaciones_requisito` 11, `documentos_solicitud` 17, `revisiones` 34, `historial_estados` 56 y `auditoria` 68. El informe muestra esperado/insertado por tabla y enumera faltantes o discrepancias.
+3. **Dado** IDs expl?citos de SQLite, **cuando** se insertan los registros en PostgreSQL, **entonces** se conservan los IDs y se avanza cada secuencia con `setval` al valor correcto para que la siguiente inserci?n no colisione.
+4. **Dado** campos booleanos SQLite `activo` y `obligatorio` almacenados como 0/1, **cuando** se importan, **entonces** se convierten a `false`/`true`; las fechas de texto ISO 8601 con zona se convierten a `timestamp`, normaliz?ndose a UTC cuando el destino no conserva zona.
+5. **Dado** 17 filas de documentos y el directorio pasado por `--origen-archivos`, **cuando** se copian a la carpeta de subidas configurada (por defecto `server/uploads/documentos`), **entonces** se verifican los 17 nombres, `rutaArchivo` conserva solo el nombre de archivo y los originales no se borran. Los faltantes quedan listados en el informe.
+
+---
+
+### Historia 3 - Ejecutar pruebas Jest del servidor con PostgreSQL (Prioridad: P3)
 
 Como desarrollador del servidor, quiero ejecutar las mismas suites de integración sobre una base PostgreSQL temporal de prueba, para verificar que el cambio de proveedor conserva las aserciones y los flujos actuales.
 
@@ -44,13 +62,13 @@ Como desarrollador del servidor, quiero ejecutar las mismas suites de integraci�
 
 ---
 
-### Historia 3 - Operar y mantener la arquitectura documentada (Prioridad: P3)
+### Historia 4 - Operar y mantener la arquitectura documentada (Prioridad: P4)
 
 Como equipo de mantenimiento, queremos que la documentación arquitectónica y la constitución reflejen el motor y la transición reales, para que despliegues y futuros cambios usen una fuente de verdad coherente.
 
 **Por qué esta prioridad**: Las decisiones de base de datos afectan requisitos de calidad, arquitectura, operación, inicialización y pruebas.
 
-**Prueba independiente**: Revisar documentación de las capas 01 a 04 y verificar que ninguna describa SQLite/libSQL como motor operativo vigente, que la migración de datos y los hallazgos estén registrados y que la constitución tenga versión 1.3.0.
+**Prueba independiente**: Revisar documentación de las capas 01 a 04 y verificar que ninguna describa SQLite/libSQL como motor operativo vigente, que la migración de datos, la copia de archivos y los hallazgos estén registrados y que la constitución tenga versión 1.3.0.
 
 **Escenarios de aceptación**:
 
@@ -85,6 +103,7 @@ Hallazgos técnicos para validar y documentar, no corregir en lógica de negocio
 - **FR-002**: El arranque y los comandos de inicialización DEBEN exigir `DATABASE_URL` presente con prefijo literal `postgresql://`; deben rechazar SQLite, libSQL, esquemas distintos y valor ausente antes de conectarse o modificar una base.
 - **FR-003**: DEBE existir una migración PostgreSQL inicial versionada y documentada que cree el esquema vigente, incluidas tablas, enums nativos, defaults, relaciones, restricciones, índices y nombres físicos preservados.
 - **FR-004**: DEBE existir un script idempotente de inicialización/despliegue de migraciones para una base PostgreSQL vacía. No debe usar `db push`, reiniciar la base ni borrar objetos/datos preexistentes.
+- **FR-005**: El script `db:migrar-datos` DEBE recibir el SQLite de origen mediante `--origen`, conservar los IDs, importar en orden de dependencias, convertir booleanos/fechas según las reglas de la especificación, verificar conteos, ajustar secuencias con `setval` y emitir un informe de reconciliación sin modificar el origen. DEBE admitir `--dry-run`, que lee el origen, valida conversiones y conteos esperados y emite el informe sin escribir en PostgreSQL ni copiar archivos. Repetir la migración debe ser idempotente y no duplicar datos.
 - **FR-006**: Las ocho suites Jest actuales de `server/` DEBEN usar PostgreSQL local en Docker o el servicio PostgreSQL de GitHub Actions, con un helper compartido que cree un schema aleatorio por archivo, aplique las migraciones vigentes, siembre datos sinteticos y ejecute `DROP SCHEMA ... CASCADE` al terminar. DEBEN conservar el 100 % de las aserciones y su intencion; solo se ajustan expectativas que difieran por proveedor y se registran como hallazgo.
 - **FR-007**: Los fixtures DEBEN tomar la URL base desde `SIGEP_TEST_DATABASE_URL`, rechazarla antes de conectar si falta o coincide con la URL institucional `DATABASE_URL`, y limitar toda preparacion/limpieza al schema aleatorio del archivo.
 - **FR-008**: Las diferencias observadas de sensibilidad a mayúsculas en búsquedas y validación de enums DEBEN registrarse como hallazgos de pruebas/documentación; este cambio no altera filtros, endpoints, permisos, transiciones ni reglas de negocio para ocultar esas diferencias.
@@ -96,9 +115,11 @@ Hallazgos técnicos para validar y documentar, no corregir en lógica de negocio
 
 ### Entidades clave
 
-- **Base SQLite/libSQL local de desarrollo**: Artefacto temporal ignorado por Git, sin datos institucionales versionados; se recrea con el script de inicialización y no requiere transferencia a PostgreSQL.
+- **Base SQLite de origen**: `server/.runtime-local/.sigep-local/grados.sqlite`; antes de importar se conserva `grados.respaldo.sqlite` en la misma carpeta. El script recibe la ruta con `--origen`; no modifica ninguno de los dos archivos.
 - **Base PostgreSQL destino**: Persistencia operativa con el mismo modelo SIGEP y enforcement nativo de relaciones, restricciones y enums.
 - **Migración versionada**: Cambio de esquema ordenado que lleva una base PostgreSQL vacía al contrato actual y deja registro de aplicación.
+- **Migración de datos**: Copia de los diez conjuntos de filas y sus IDs, relaciones, tipos convertidos y secuencias desde el archivo SQLite indicado.
+- **Archivos de documentos**: 17 archivos de `server/.runtime-local/.sigep-local/documentos`, copiados por nombre a la carpeta de subidas configurada sin borrar el origen.
 - **Base PostgreSQL de pruebas**: Servicio PostgreSQL de Docker local o GitHub Actions identificado por `SIGEP_TEST_DATABASE_URL`; cada archivo Jest usa un schema aleatorio aislado que el helper compartido elimina al finalizar.
 - **Hallazgo de proveedor**: Diferencia observable entre SQLite/libSQL y PostgreSQL que se registra sin alterar reglas de negocio en esta feature.
 
@@ -107,6 +128,8 @@ Hallazgos técnicos para validar y documentar, no corregir en lógica de negocio
 ### Resultados medibles
 
 - **SC-001**: Una base PostgreSQL vacía puede inicializarse desde el repositorio y superar todas las validaciones del esquema sin intervención manual no documentada.
+- **SC-002**: Los conteos por tabla coinciden con los diez valores esperados y todos los IDs, relaciones y secuencias importados se validan; se reportan discrepancias sin borrar el origen.
+- **SC-008**: Los 17 nombres de archivo se verifican y copian a la carpeta de subidas configurada, `rutaArchivo` guarda solo el nombre, los originales permanecen intactos y el informe lista cualquier faltante.
 - **SC-003**: Las ocho suites Jest del servidor pasan sobre PostgreSQL, mantienen el 100 % de sus aserciones preexistentes y documentan las expectativas que deban reflejar una diferencia comprobada del proveedor.
 - **SC-004**: El script de siembra independiente de Jest crea 20.000 cuentas y verifica lecturas y escrituras CRUD sin perdida, duplicacion no autorizada ni relaciones invalidas.
 - **SC-005**: Las URLs no PostgreSQL son rechazadas antes de iniciar el servidor o cambiar datos; el helper de pruebas rechaza `SIGEP_TEST_DATABASE_URL` ausente o igual a `DATABASE_URL` antes de tocar la base.
@@ -135,8 +158,8 @@ Hallazgos técnicos para validar y documentar, no corregir en lógica de negocio
 
 ### Session 2026-11-22
 
-- Se confirmó que `sigep.db` y los datos de `.runtime-local/` son solo de desarrollo y no están versionados; se elimina Historia 2, FR-005 y SC-002, y PostgreSQL se inicializa desde migraciones sin copiar esos datos.
+- Corrección: la fuente de datos que se migra es `server/.runtime-local/.sigep-local/grados.sqlite`; el respaldo previo es `grados.respaldo.sqlite` en la misma carpeta. Se restablece la historia de transferencia con conteos, orden, conversiones, archivos y secuencias explícitos.
 - FR-012 se valida con un script de siembra independiente de Jest que crea y comprueba 20.000 cuentas.
-- Se registró el comportamiento real de `index.js`, `schema.prisma`, `prisma.config.ts` e `inicializar-base.js`; se alinea `@prisma/adapter-pg` a 7.8.0 con Prisma 7.8.0 y se fija `pg` 8.22.0 (rama 8.x).
+- Se confirmó el origen `server/.runtime-local/.sigep-local/grados.sqlite`, su respaldo `grados.respaldo.sqlite`, los conteos, orden, conversiones y copia de documentos; `--origen` y `--origen-archivos` son opciones del script de migración. Se registró también el comportamiento de `index.js`, `schema.prisma`, `prisma.config.ts` e `inicializar-base.js`, y las versiones Prisma/adaptador/driver.
 - Los tests comparten un helper que crea un schema aleatorio por archivo, aplica migraciones, siembra datos y ejecuta `DROP SCHEMA ... CASCADE`; rechaza `SIGEP_TEST_DATABASE_URL` ausente o igual a `DATABASE_URL` antes de conectar.
 - Las pruebas usan PostgreSQL en Docker local y como servicio de GitHub Actions, configurado mediante `SIGEP_TEST_DATABASE_URL`.

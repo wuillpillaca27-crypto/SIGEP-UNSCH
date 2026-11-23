@@ -14,10 +14,20 @@
 ## Esquema e historial de migraciones
 
 - **Decisión**: cambiar el provider Prisma a PostgreSQL, generar SQL inicial revisable a partir del modelo actual y aplicar instalaciones/actualizaciones con `prisma migrate deploy`. Conservar el directorio de migraciones como historial versionado.
-- **Razón**: `migrate deploy` aplica migraciones pendientes sin resetear ni crear una base de datos; el servicio PostgreSQL debe existir antes. La migración inicial debe comprobarse contra todas las entidades y enums del schema. La base SQLite local, ignorada y de desarrollo, se recrea desde cero: no se importa ni se modifica.
-- **Alternativas consideradas**: `db push` no registra migraciones; `migrate reset` destruye datos y no es apropiado para inicialización operativa; copiar SQLite no es necesario porque no contiene datos institucionales.
-- **Consecuencia**: el inicializador valida URL y destino, luego invoca el historial de migraciones; no ejecuta `PRAGMA`, `node:sqlite`, ni crea/borrar schemas de runtime.
+- **Razón**: `migrate deploy` aplica migraciones pendientes sin resetear ni crear una base de datos; el servicio PostgreSQL debe existir antes. La migración inicial debe comprobarse contra todas las entidades y enums. Después de aplicar el schema, un flujo de datos separado importa el origen SQLite real y copia sus documentos; ambos orígenes se mantienen intactos.
+- **Alternativas consideradas**: `db push` no registra migraciones; `migrate reset` destruye datos y no es apropiado para inicialización operativa; mezclar creación de schema e importación en un flujo opaco dificulta reconciliar conteos.
+- **Consecuencia**: el inicializador valida URL y destino, luego invoca el historial de migraciones; no ejecuta `PRAGMA` ni `node:sqlite` sobre el destino. `db:migrar-datos` es un comando independiente del inicializador y de Jest.
 - **Fuentes primarias**: [Prisma Migrate v7](https://www.prisma.io/docs/orm/v7/prisma-migrate/getting-started), [`migrate deploy` v7](https://www.prisma.io/docs/cli/v7/migrate/deploy), [despliegue de migraciones](https://www.prisma.io/docs/orm/v7/prisma-client/deployment/deploy-migrations-from-a-local-environment).
+
+## Migraci?n de datos y archivos
+
+- **Origen**: `server/.runtime-local/.sigep-local/grados.sqlite`; respaldo previo: `server/.runtime-local/.sigep-local/grados.respaldo.sqlite`. El script recibe la fuente seleccionada con `--origen <ruta>` y los adjuntos con `--origen-archivos <directorio>`.
+- **Orden de carga**: `usuarios`, `programas`, `estudiantes`, `plantillas_requisito`, `solicitudes`, `validaciones_requisito`, `documentos_solicitud`, `revisiones`, `historial_estados`, `auditoria`. Respeta dependencias de claves for?neas.
+- **Conteos esperados**: usuarios 7; programas 6; estudiantes 6; plantillas_requisito 6; solicitudes 12; validaciones_requisito 11; documentos_solicitud 17; revisiones 34; historial_estados 56; auditoria 68. El informe compara esperado con origen e insertado y enumera tablas/filas discrepantes.
+- **Conversiones**: `activo` y `obligatorio` pasan de 0/1 a boolean; texto ISO 8601 con zona se convierte a timestamp, normalizando a UTC si el tipo destino no conserva zona.
+- **IDs y secuencias**: inserta cada ID de origen expl?citamente y usa `setval` para sincronizar la secuencia correspondiente al mayor ID importado y dejar segura la siguiente inserci?n.
+- **Adjuntos**: se verifican los 17 nombres de `server/.runtime-local/.sigep-local/documentos`. Se copian, no se mueven, a la carpeta de subidas configurada (por defecto `server/uploads/documentos`); `rutaArchivo` contiene solo el nombre. Si falta un archivo, se incluye su nombre en el informe sin descartar filas/documentos ni borrar originales.
+- **Alternativa considerada**: reconstruir solo el schema PostgreSQL contradice el conjunto de datos real confirmado y pierde continuidad de expedientes; por eso se conserva schema-migrate e importaci?n como pasos distinguibles y verificables.
 
 ## PostgreSQL por archivo Jest
 
@@ -50,5 +60,5 @@
 
 ## Verificación del origen de datos local
 
-- `server/.gitignore` ignora `.runtime-local/`; Git no contiene una base SQLite (`*.db`/`*.sqlite`) versionada y la búsqueda del árbol tampoco encontró un archivo de esas extensiones. La spec registra la base local como recreable y sin migración de contenido.
-- Esto justifica no copiar datos de desarrollo, pero no autoriza borrar tablas o datos que ya existan en la base PostgreSQL de destino: inicialización rechaza un destino incompatible y `migrate deploy` trabaja sobre el historial pendiente.
+- `server/.gitignore` ignora `.runtime-local/`, pero el archivo de origen real confirmado para esta feature es `server/.runtime-local/.sigep-local/grados.sqlite`; su respaldo es `grados.respaldo.sqlite` en esa carpeta. Los archivos están ignorados por ser locales, pero sus filas y los 17 adjuntos sí se migran por instrucción funcional.
+- El respaldo previo es obligatorio antes de ejecutar la carga. Esto no autoriza borrar tablas o datos preexistentes en PostgreSQL; la inicialización rechaza destinos incompatibles y `migrate deploy` aplica solo migraciones pendientes.
