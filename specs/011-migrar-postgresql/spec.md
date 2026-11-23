@@ -37,7 +37,7 @@ Como desarrollador del servidor, quiero ejecutar las mismas suites de integraci�
 
 **Escenarios de aceptación**:
 
-1. **Dado** `SIGEP_TEST_DATABASE_URL` que apunta al PostgreSQL exclusivo de pruebas, **cuando** se ejecuta un archivo Jest, **entonces** el helper compartido crea un schema aleatorio, aplica ahi las migraciones, siembra datos sinteticos del archivo y lo elimina con `DROP SCHEMA ... CASCADE` al terminar.
+1. **Dado** `SIGEP_TEST_DATABASE_URL` que apunta al PostgreSQL exclusivo de pruebas, **cuando** se ejecuta un archivo Jest, **entonces** el helper compartido crea un schema aleatorio, aplica ah? las migraciones, siembra datos sint?ticos del archivo y lo elimina con `DROP SCHEMA ... CASCADE` al terminar.
 2. **Dado** las ocho suites actuales del servidor, **cuando** se adaptan los fixtures al proveedor PostgreSQL, **entonces** se conservan todas las comprobaciones, nombres y objetivos de cobertura sin eliminar ni debilitar aserciones; una expectativa que cambie por el proveedor solo se ajusta al resultado observado y se registra como hallazgo.
 3. **Dado** que `SIGEP_TEST_DATABASE_URL` falta o es igual a la URL institucional `DATABASE_URL`, **cuando** se prepara una suite, **entonces** el helper falla antes de conectarse, migrar, sembrar o limpiar datos.
 4. **Dado** consultas de búsqueda y campos enum que se ejecutan contra ambas tecnologías, **cuando** los resultados difieren, **entonces** las pruebas anotan la conducta observada como hallazgo y no alteran lógica productiva para forzar paridad.
