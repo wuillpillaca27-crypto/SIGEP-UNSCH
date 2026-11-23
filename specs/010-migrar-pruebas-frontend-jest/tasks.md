@@ -117,8 +117,8 @@
 
 **Propósito**: Comprobar la suite completa, cobertura, build y alcance final.
 
-- [ ] T026 Ejecutar `npm test` desde `client/` y verificar que se ejecuten los casos P2–P6 y se generen reportes text, HTML y lcov ignorados por `client/.gitignore`.
-- [ ] T027 Ejecutar `npm run build` desde `client/` y revisar el diff para confirmar que los cambios de implementación están limitados a configuración, dependencias y pruebas de `client/`, sin cambios en producción, `server/` o base de datos.
+- [X] T026 Ejecutar `npm test` desde `client/` y verificar que se ejecuten los casos P2–P6 y se generen reportes text, HTML y lcov ignorados por `client/.gitignore`.
+- [X] T027 Ejecutar `npm run build` desde `client/` y revisar el diff para confirmar que los cambios de implementación están limitados a configuración, dependencias y pruebas de `client/`, sin cambios en producción, `server/` o base de datos.
 
 ## Dependencias y orden de ejecución
 

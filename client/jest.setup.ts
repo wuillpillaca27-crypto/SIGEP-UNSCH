@@ -1,4 +1,4 @@
-import "@testing-library/jest-dom";
+import "@testing-library/jest-dom/jest-globals";
 import { afterAll, afterEach, beforeAll } from "@jest/globals";
 import { TextDecoder, TextEncoder } from "node:util";
 import { ReadableStream, TransformStream, WritableStream } from "node:stream/web";
