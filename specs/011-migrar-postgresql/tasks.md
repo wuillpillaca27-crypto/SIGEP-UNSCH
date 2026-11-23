@@ -18,6 +18,14 @@
 
 **Purpose**: Establecer el esquema PostgreSQL y la migración versionada que requieren las historias.
 
+**Precondición arquitectónica**: Completar T034–T038 antes de cualquier tarea que modifique `server/`, incluida T001.
+
+- [ ] T034 [P] [US4] Actualizar análisis, requisitos y decisiones de persistencia en `docs/01-analisis-de-sistema/` para describir PostgreSQL y la transferencia del origen real.
+- [ ] T035 [P] [US4] Actualizar decisiones, componentes y arquitectura de persistencia en `docs/02-arquitectura-software/` para reflejar Prisma PostgreSQL y el adaptador.
+- [ ] T036 [P] [US4] Crear la documentación de conexión, migración inicial, inicialización y operación PostgreSQL en `docs/03-diseno-detallado/`.
+- [ ] T037 [P] [US4] Actualizar los diagramas C4 pertinentes en `docs/04-modelo-c4/` para representar PostgreSQL y el adaptador de persistencia.
+- [ ] T038 [P] [US4] Actualizar stack, principio de base de datos e informe de impacto a v1.3.0 en `.specify/memory/constitution.md`.
+
 - [ ] T002 Cambiar el provider a PostgreSQL en `server/prisma/schema.prisma` y preservar las restricciones de `Usuario.dni`, `Usuario.email`, `Estudiante.usuarioId`, `Estudiante.codigoUniv`, `PlantillaRequisito.codigo` y `Solicitud.codigo` según `specs/011-migrar-postgresql/data-model.md`.
 - [ ] T003 Generar y revisar la migración inicial en `server/prisma/migrations/` para que cree las diez tablas, enums, índices, relaciones y nombres físicos descritos en `specs/011-migrar-postgresql/data-model.md`.
 - [ ] T004 Ajustar la carga de `DATABASE_URL` para Prisma 7 en `server/prisma.config.ts` y validar que los comandos Prisma usan configuración PostgreSQL.
@@ -25,7 +33,7 @@
 - [ ] T006 Sustituir la inicialización SQLite por despliegue idempotente de migraciones en `server/scripts/inicializar-base.js`, sin resetear ni borrar datos existentes.
 - [ ] T007 Verificar la generación del cliente y la inicialización de una base PostgreSQL vacía mediante `server/prisma/schema.prisma`, `server/prisma/migrations/` y `server/scripts/inicializar-base.js`.
 
-**Checkpoint**: La aplicación puede generar el cliente y desplegar el esquema PostgreSQL en una base vacía.
+**Checkpoint**: T034–T038 están completos antes de T001 y cualquier cambio en `server/`; después, T001–T007 permiten generar el cliente y desplegar el esquema PostgreSQL en una base vacía.
 
 ---
 
@@ -94,11 +102,6 @@
 
 **Independent Test**: Revisar docs/01 a docs/04 y la constitución para confirmar coherencia sobre proveedor, migración de datos, archivos, pruebas y capacidad objetivo; ejecutar los pasos de `quickstart.md` en un entorno de desarrollo.
 
-- [ ] T034 [P] [US4] Actualizar análisis, requisitos y decisiones de persistencia en `docs/01-analisis-de-sistema/` para describir PostgreSQL y la transferencia del origen real.
-- [ ] T035 [P] [US4] Actualizar decisiones, componentes y arquitectura de persistencia en `docs/02-arquitectura-software/` para reflejar Prisma PostgreSQL y el adaptador.
-- [ ] T036 [P] [US4] Crear la documentación de conexión, migración inicial, inicialización y operación PostgreSQL en `docs/03-diseno-detallado/`.
-- [ ] T037 [P] [US4] Actualizar los diagramas C4 pertinentes en `docs/04-modelo-c4/` para representar PostgreSQL y el adaptador de persistencia.
-- [ ] T038 [P] [US4] Actualizar stack, principio de base de datos e informe de impacto a v1.3.0 en `.specify/memory/constitution.md`.
 - [ ] T039 [US4] Actualizar la guía operacional para que `specs/011-migrar-postgresql/quickstart.md` documente respaldar la base y la carpeta de documentos, ejecutar `--dry-run` y solo después la migración real, validar hashes/conteos y probar el inicio de sesión con una cuenta migrada.
 
 **Checkpoint**: Documentación del sistema y pasos operativos describen la misma arquitectura y proceso.
@@ -117,12 +120,13 @@
 
 ### Phase Dependencies
 
-- **Setup (Phase 1)**: No dependencies.
-- **Foundational (Phase 2)**: Depende de Setup; bloquea las historias porque establece el cliente y el esquema PostgreSQL.
+- **Precondición documental de Foundational (T034–T038)**: Se ejecuta primero, aunque las tareas estén agrupadas al inicio de Phase 2; bloquea toda tarea que modifique `server/`.
+- **Setup (Phase 1, T001)**: Depende de T034–T038; prepara las dependencias y comandos PostgreSQL.
+- **Foundational (Phase 2, T002–T007)**: Depende de T001 y T034–T038; bloquea las historias porque establece el cliente y el esquema PostgreSQL.
 - **User Story 1 (Phase 3)**: Depende de Foundational.
 - **User Story 2 (Phase 4)**: Depende de Foundational; su prueba de integración requiere una base inicializada. Puede avanzar en paralelo con US1 tras completar la fundación.
 - **User Story 3 (Phase 5)**: Depende de Foundational y del servicio PostgreSQL de prueba; puede desarrollarse en paralelo con US2.
-- **User Story 4 (Phase 6)**: Depende de decisiones estables de las historias 1–3 para documentar el comportamiento implementado.
+- **User Story 4 (Phase 6)**: T034–T038 son la precondición arquitectónica de Phase 2; T039 depende de decisiones estables de las historias 1–3 para consolidar la guía operacional.
 - **Polish (Phase 7)**: Depende de las historias que se vayan a entregar.
 
 ### User Story Dependencies
@@ -130,14 +134,14 @@
 - **US1 (P1)**: Independiente tras Foundational; MVP sugerido.
 - **US2 (P2)**: Independiente tras Foundational; requiere esquema ya inicializado en su validación completa.
 - **US3 (P3)**: Independiente tras Foundational; sus suites comparten el helper, y cada archivo usa un schema aislado.
-- **US4 (P4)**: Consolidación documental posterior a las decisiones de implementación.
+- **US4 (P4)**: T034–T038 preceden los cambios arquitectónicos; T039 consolida la guía operacional después de las decisiones de implementación.
 
 ### Parallel Opportunities
 
 - T004 y T005 pueden avanzar en paralelo tras T001–T003 porque modifican archivos separados.
 - T009 y T011 pueden avanzar en paralelo dentro de US1; T010 depende de la definición del script T009.
 - T024–T031 pueden ejecutarse en paralelo una vez completado T023, ya que cada tarea adapta un archivo de suite distinto.
-- T034–T038 pueden ejecutarse en paralelo porque actualizan archivos y carpetas diferentes; T039 depende de las decisiones operativas consolidadas.
+- T034–T038 pueden ejecutarse en paralelo porque actualizan archivos y carpetas diferentes; todas deben finalizar antes de T001 y de cualquier tarea que modifique `server/`. T039 depende de las decisiones operativas consolidadas.
 - US2 y US3 pueden implementarse en paralelo una vez que la fundación PostgreSQL está lista.
 
 ## Parallel Example: User Story 3
@@ -150,14 +154,14 @@ Completar primero T023. Después, distribuir en paralelo T024–T031, un archivo
 
 ### MVP First
 
-Completar Setup y Foundational, después US1 para iniciar SIGEP sobre PostgreSQL, crear el esquema y verificar operaciones CRUD. Validar esta historia antes de continuar.
+Completar primero T034–T038, luego T001 y T002–T007; después US1 para iniciar SIGEP sobre PostgreSQL, crear el esquema y verificar operaciones CRUD. Validar esta historia antes de continuar.
 
 ### Incremental Delivery
 
 1. Completar US1 y validar arranque, esquema y siembra de carga.
 2. Completar US2 para incorporar origen, dry run, idempotencia y documentos.
 3. Completar US3 para adaptar y ejecutar Jest en PostgreSQL.
-4. Completar US4 y Polish para alinear documentación y cerrar evidencia.
+4. Completar T039 y Polish para cerrar la guía operacional y la evidencia; T034–T038 ya deben estar completos antes de cualquier cambio en `server/`.
 
 ### Notes
 
