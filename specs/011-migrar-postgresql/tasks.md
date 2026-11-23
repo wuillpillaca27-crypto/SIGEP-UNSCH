@@ -60,7 +60,7 @@
 - [ ] T019 [US2] Verificar los 17 nombres en `server/.runtime-local/.sigep-local/documentos`, copiar los disponibles a la carpeta de subidas configurada sin borrar originales y guardar solo el nombre en `rutaArchivo` desde `server/scripts/migrar-datos.js`; enumerar faltantes en el informe.
 - [ ] T020 [US2] Añadir el comando `db:migrar-datos` y sus entradas en `server/package.json`.
 - [ ] T021 [US2] Añadir pruebas de respaldos, `--dry-run`, conteos, conversiones, hashes por tabla, IDs/secuencias, repetición sin duplicados y faltantes de archivos en `server/scripts/migrar-datos.test.js`.
-- [ ] T022 [US2] Después de la migración real, probar el inicio de sesión con una cuenta de prueba migrada en `server/src/identidad.test.js`; confirmar que el hash bcrypt de PostgreSQL coincide exactamente con el hash del origen y que el usuario puede autenticarse con su contraseña de prueba.
+- [ ] T022 [US2] Agregar un caso nuevo de inicio de sesión con una cuenta de prueba migrada en `server/src/identidad.test.js`, sin modificar ni borrar los casos existentes; después de la migración real, confirmar que el hash bcrypt de PostgreSQL coincide exactamente con el hash del origen y que la autenticación funciona con la contraseña de prueba. Al ejecutar las pruebas contra PostgreSQL, no superar 10 logins por archivo.
 
 **Checkpoint**: Respaldos previos creados; dry run completado antes de la carga real; migración repetible que falla ante diferencias de conteo o hash, con IDs, archivos y autenticación de una cuenta migrada verificados.
 
