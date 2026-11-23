@@ -68,13 +68,13 @@
 
 **Prueba independiente**: Ejecutar cada archivo de servicio aisladamente con el cliente HTTP simulado y comparar las llamadas con los módulos del servicio vigentes.
 
-- [ ] T008 [P] [US4] Crear `client/app/__tests__/services/auth.service.test.ts` para login, perfil y logout según `client/app/services/auth.service.ts`.
-- [ ] T009 [P] [US4] Crear `client/app/__tests__/services/estudiantes.service.test.ts` para rutas, paginación, búsqueda, obtención, creación, edición y eliminación según `client/app/services/estudiantes.service.ts`.
-- [ ] T010 [P] [US4] Crear `client/app/__tests__/services/expedientes.service.test.ts` para listado, parámetros opcionales, obtención, creación y cambio de estado según `client/app/services/expedientes.service.ts`.
-- [ ] T011 [P] [US4] Crear `client/app/__tests__/services/usuarios.service.test.ts` para listado, filtro de rol, CRUD y cambio de estado según `client/app/services/usuarios.service.ts`.
-- [ ] T012 [P] [US4] Crear `client/app/__tests__/services/programas.service.test.ts` para listado, filtro opcional, obtención, creación y edición según `client/app/services/programas.service.ts`.
-- [ ] T013 [P] [US4] Crear `client/app/__tests__/services/documentos.service.test.ts` para listado, obtención, verificación QR, exportación SUNEDU y parámetros opcionales según `client/app/services/documentos.service.ts`.
-- [ ] T014 [P] [US4] Crear `client/app/__tests__/services/auditoria.service.test.ts` para listado, paginación y búsqueda según `client/app/services/auditoria.service.ts`.
+- [X] T008 [P] [US4] Crear `client/app/__tests__/services/auth.service.test.ts` para login, perfil y logout según `client/app/services/auth.service.ts`.
+- [X] T009 [P] [US4] Crear `client/app/__tests__/services/estudiantes.service.test.ts` para rutas, paginación, búsqueda, obtención, creación, edición y eliminación según `client/app/services/estudiantes.service.ts`.
+- [X] T010 [P] [US4] Crear `client/app/__tests__/services/expedientes.service.test.ts` para listado, parámetros opcionales, obtención, creación y cambio de estado según `client/app/services/expedientes.service.ts`.
+- [X] T011 [P] [US4] Crear `client/app/__tests__/services/usuarios.service.test.ts` para listado, filtro de rol, CRUD y cambio de estado según `client/app/services/usuarios.service.ts`.
+- [X] T012 [P] [US4] Crear `client/app/__tests__/services/programas.service.test.ts` para listado, filtro opcional, obtención, creación y edición según `client/app/services/programas.service.ts`.
+- [X] T013 [P] [US4] Crear `client/app/__tests__/services/documentos.service.test.ts` para listado, obtención, verificación QR, exportación SUNEDU y parámetros opcionales según `client/app/services/documentos.service.ts`.
+- [X] T014 [P] [US4] Crear `client/app/__tests__/services/auditoria.service.test.ts` para listado, paginación y búsqueda según `client/app/services/auditoria.service.ts`.
 
 **Punto de control**: Los siete servicios cubiertos conservan sus contratos observables y no contactan un backend.
 
