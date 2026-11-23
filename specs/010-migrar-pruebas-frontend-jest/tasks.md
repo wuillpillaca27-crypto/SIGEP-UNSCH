@@ -56,7 +56,7 @@
 
 **Prueba independiente**: Ejecutar el archivo de API y observar con MSW las solicitudes GET, POST, PUT, PATCH y DELETE, junto con respuestas exitosas, errores y fallos de red.
 
-- [ ] T007 [P] [US3] Crear `client/app/__tests__/lib/api.test.ts` para métodos, URL, JSON, `Content-Type`, prioridad de errores, parseo fallido, error de red y ausencia de lectura de token o `Authorization`, usando MSW desde `client/jest.setup.ts`.
+- [X] T007 [P] [US3] Crear `client/app/__tests__/lib/api.test.ts` para métodos, URL, JSON, `Content-Type`, prioridad de errores, parseo fallido, error de red y ausencia de lectura de token o `Authorization`, usando MSW desde `client/jest.setup.ts`.
 
 **Punto de control**: Los casos HTTP pasan sin llamadas a servicios reales.
 

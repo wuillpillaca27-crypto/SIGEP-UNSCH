@@ -2,7 +2,7 @@ import "@testing-library/jest-dom";
 import { afterAll, afterEach, beforeAll } from "@jest/globals";
 import { TextDecoder, TextEncoder } from "node:util";
 import { ReadableStream, TransformStream, WritableStream } from "node:stream/web";
-import { MessageChannel, MessagePort } from "node:worker_threads";
+import { BroadcastChannel, MessageChannel, MessagePort } from "node:worker_threads";
 
 Object.assign(globalThis, {
   TextDecoder,
@@ -12,6 +12,7 @@ Object.assign(globalThis, {
   WritableStream,
   MessageChannel,
   MessagePort,
+  BroadcastChannel,
 });
 
 const fetchGlobals = require("undici");
