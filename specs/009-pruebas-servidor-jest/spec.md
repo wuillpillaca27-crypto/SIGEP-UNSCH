@@ -186,6 +186,14 @@ Como persona usuaria, quiero que las pruebas cubran el inicio y cierre de sesió
 - La lista de intentos de login es local al proceso y su expiración/límite depende de `req.ip`; no equivale a un límite distribuido entre instancias. Registrar esta limitación como hallazgo operativo, sin rediseñarla aquí.
 - El escenario actual de solicitudes espera exactamente ocho registros de auditoría después de las acciones indicadas; debe conservarse como aserción del escenario, sin inferir que cada operación tenga auditoría universal.
 
+**Resultados confirmados por la ejecución final de pruebas (22-11-2026)**:
+
+- El listado P2 devuelve hasta 20 resultados de una consulta de 21 e informa la página siguiente; parámetros inválidos se ignoran. La paginación observada normaliza los límites de página.
+- En P4, `pagina` usa `Number.parseInt` (por ejemplo, `1x` y `1.5` se interpretan como página 1). Estudiantes, usuarios y auditoría consultan hasta 26 filas para presentar 25 e indicar si sigue; programas y requisitos no aplican ese paginado.
+- En P3, una acción repetida concurrentemente produce conflicto y evita registros duplicados; las transiciones ejercitadas contrastan el estado persistido, historial y auditoría. Una ruta almacenada que no cumple el formato PDF UUID permitido se rechaza.
+- En P5, logout limpia la cookie y devuelve `{ ok: true }` incluso sin una sesión válida. El limitador probado acepta diez intentos por IP y responde 429 en el undécimo; su estado es local al proceso.
+- Durante el cierre de las suites, `rm` de directorios temporales devolvió `EBUSY` en algunos casos de Windows. El error se capturó y reportó con `console.warn`; no hizo fallar las pruebas.
+
 ## Requisitos
 
 ### Requisitos funcionales

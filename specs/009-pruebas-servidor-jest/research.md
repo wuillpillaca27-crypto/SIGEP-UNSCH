@@ -32,3 +32,7 @@
 ## Línea base de cobertura P1 (21-11-2026)
 
 Ejecución final de `npm test -- --runInBand` en `server/` (Jest 30.5.2, sin umbral): 2 suites aprobadas y 6 casos aprobados; se conservaron las aserciones S-01–S-57 y C-01–C-07. Cobertura inicial global: statements 59.62%, branches 48.65%, functions 71.42% y lines 63.34%. Reportes producidos en `server/coverage/`: `index.html`, `lcov-report/index.html` y `lcov.info`.
+
+## Cobertura final (22-11-2026)
+
+Ejecución de `npm test` desde `server/`: 8 suites aprobadas, 36 pruebas aprobadas, 0 fallidas (33.914 s). Cobertura global final: sentencias 73,58 %, ramas 67,23 %, funciones 88,31 % y líneas 76,57 %. Jest generó reportes de texto, HTML y lcov en `server/coverage/`; no se configura umbral de cobertura.
