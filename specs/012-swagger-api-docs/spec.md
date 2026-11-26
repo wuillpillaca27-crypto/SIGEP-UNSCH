@@ -9,6 +9,12 @@ Incorporar una especificación OpenAPI que describa las rutas HTTP del inventari
 
 La implementación se limita a documentación OpenAPI, dependencias necesarias para servirla y montaje de la ruta de documentación. No se modificarán respuestas, validaciones, permisos, persistencia, transiciones ni ninguna otra lógica de negocio. Las operaciones documentadas reflejarán las rutas actualmente declaradas, incluyendo sus prefijos y archivos fuente.
 
+## Historias de usuario
+
+### US1 (P1): Consultar la documentación de la API
+
+Como desarrollador o integrador, quiero abrir `/api-docs` y consultar el contrato OpenAPI de las rutas vigentes del inventario FR-016, para conocer los métodos, parámetros y respuestas documentados sin cambiar el comportamiento de la API.
+
 ## Requisitos funcionales
 
 - **FR-001**: El servidor DEBE publicar Swagger UI en `GET /api-docs` y la interfaz DEBE cargar una especificación OpenAPI válida.
