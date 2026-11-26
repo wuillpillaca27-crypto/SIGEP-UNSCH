@@ -33,8 +33,8 @@ description: "Lista de tareas para publicar Swagger UI y documentar las rutas ac
 
 **Criterio de prueba independiente**: Iniciar el servidor y abrir `GET /api-docs`; Swagger UI debe cargar el documento y mostrar todos los métodos y rutas cotejados en T002, con sus detalles respaldados por los módulos de ruta o contratos existentes. La revisión del diff debe confirmar que no cambiaron handlers ni reglas de negocio.
 
-- [ ] T003 [P] [US1] Crear `server/openapi.json` como documento OpenAPI válido con metadatos, rutas completas, operaciones, parámetros, esquemas de solicitud/respuesta y respuestas únicamente cuando estén sustentados por el código actual y `docs/legacy/openspec/api-contracts.md`; incluir todo el inventario conciliado en T002.
-- [ ] T004 [US1] Cargar `server/openapi.json` y montar `swagger-ui-express` en `GET /api-docs` desde `server/src/index.js`, sin modificar el registro ni el comportamiento de los endpoints funcionales.
+- [X] T003 [P] [US1] Crear `server/openapi.json` como documento OpenAPI válido con metadatos, rutas completas, operaciones, parámetros, esquemas de solicitud/respuesta y respuestas únicamente cuando estén sustentados por el código actual y `docs/legacy/openspec/api-contracts.md`; incluir todo el inventario conciliado en T002.
+- [X] T004 [US1] Cargar `server/openapi.json` y montar `swagger-ui-express` en `GET /api-docs` desde `server/src/index.js`, sin modificar el registro ni el comportamiento de los endpoints funcionales.
 
 **Checkpoint**: La UI de documentación está disponible y representa el inventario actualizado sin cambios funcionales.
 

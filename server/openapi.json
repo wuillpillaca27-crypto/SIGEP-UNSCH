@@ -1,0 +1,462 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "API SIGEP-UNSCH",
+    "version": "1.0.0",
+    "description": "Contrato documental de las operaciones HTTP registradas por el servidor SIGEP. Las respuestas reflejan las formas observables en los handlers; los archivos PDF se entregan como binarios."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8000",
+      "description": "Servidor local predeterminado (el host y puerto pueden configurarse mediante HOST y PORT)."
+    }
+  ],
+  "tags": [
+    { "name": "Catálogo de grados" },
+    { "name": "Identidad" },
+    { "name": "Identidad Google" },
+    { "name": "Solicitudes" },
+    { "name": "Revisión de grados" },
+    { "name": "Administración" },
+    { "name": "Verificación de documentos" }
+  ],
+  "paths": {
+    "/api/catalogo-grados/{tramite}": {
+      "get": {
+        "tags": ["Catálogo de grados"],
+        "summary": "Listar programas activos para un trámite",
+        "parameters": [{ "$ref": "#/components/parameters/Tramite" }],
+        "responses": {
+          "200": { "description": "Lista de programas en la propiedad `datos`." },
+          "404": { "$ref": "#/components/responses/NoEncontrado" },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/catalogo-grados/{tramite}/{programaId}": {
+      "get": {
+        "tags": ["Catálogo de grados"],
+        "summary": "Consultar requisitos y normativa de un programa",
+        "parameters": [
+          { "$ref": "#/components/parameters/Tramite" },
+          { "$ref": "#/components/parameters/ProgramaId" }
+        ],
+        "responses": {
+          "200": { "description": "Requisitos activos y, si están configurados, datos normativos." },
+          "404": { "$ref": "#/components/responses/NoEncontrado" },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": ["Identidad"],
+        "summary": "Iniciar sesión con DNI o correo y contraseña",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LoginRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "Sesión iniciada; devuelve el usuario y establece una cookie de sesión." },
+          "400": { "$ref": "#/components/responses/SolicitudInvalida" },
+          "401": { "$ref": "#/components/responses/NoAutorizado" },
+          "429": { "description": "Se alcanzó el límite de intentos de inicio de sesión." },
+          "503": { "$ref": "#/components/responses/NoDisponible" },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": ["Identidad"],
+        "summary": "Cerrar sesión y borrar la cookie de sesión",
+        "responses": { "200": { "description": "Devuelve `{ ok: true }` y borra la cookie." }, "default": { "$ref": "#/components/responses/Error" } }
+      }
+    },
+    "/api/auth/perfil": {
+      "get": {
+        "tags": ["Identidad"],
+        "summary": "Consultar el perfil de la sesión actual",
+        "security": [{ "cookieAuth": [] }],
+        "responses": {
+          "200": { "description": "Perfil del usuario autenticado." },
+          "401": { "$ref": "#/components/responses/NoAutorizado" },
+          "503": { "$ref": "#/components/responses/NoDisponible" },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/auth/google/estado": {
+      "get": {
+        "tags": ["Identidad Google"],
+        "summary": "Consultar si el acceso con Google está habilitado",
+        "responses": { "200": { "description": "Devuelve un indicador booleano `habilitado`." }, "default": { "$ref": "#/components/responses/Error" } }
+      }
+    },
+    "/api/auth/google/iniciar": {
+      "get": {
+        "tags": ["Identidad Google"],
+        "summary": "Iniciar el flujo de autenticación con Google",
+        "responses": {
+          "302": { "description": "Redirige al proveedor Google cuando está configurado." },
+          "503": { "$ref": "#/components/responses/NoDisponible" },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/auth/google/callback": {
+      "get": {
+        "tags": ["Identidad Google"],
+        "summary": "Completar el callback de autenticación con Google",
+        "parameters": [
+          { "name": "state", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "code", "in": "query", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "302": { "description": "Redirige a la aplicación después de procesar la autenticación." },
+          "503": { "$ref": "#/components/responses/NoDisponible" },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/solicitudes": {
+      "get": {
+        "tags": ["Solicitudes"],
+        "summary": "Listar las solicitudes del estudiante autenticado",
+        "security": [{ "cookieAuth": [] }],
+        "responses": {
+          "200": { "description": "Arreglo de solicitudes pertenecientes a la cuenta autenticada." },
+          "401": { "$ref": "#/components/responses/NoAutorizado" },
+          "403": { "$ref": "#/components/responses/Prohibido" },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      },
+      "post": {
+        "tags": ["Solicitudes"],
+        "summary": "Crear o recuperar un borrador de solicitud",
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/NuevaSolicitud" } } } },
+        "responses": {
+          "200": { "description": "Solicitud creada o borrador existente." },
+          "401": { "$ref": "#/components/responses/NoAutorizado" },
+          "403": { "$ref": "#/components/responses/Prohibido" },
+          "409": { "$ref": "#/components/responses/Conflicto" },
+          "422": { "$ref": "#/components/responses/EntidadInvalida" },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/solicitudes/{id}/presentar": {
+      "post": {
+        "tags": ["Solicitudes"],
+        "summary": "Presentar una solicitud en borrador",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/IdSolicitud" }],
+        "responses": {
+          "200": { "description": "Solicitud después de la operación." },
+          "401": { "$ref": "#/components/responses/NoAutorizado" },
+          "403": { "$ref": "#/components/responses/Prohibido" },
+          "404": { "$ref": "#/components/responses/NoEncontrado" },
+          "409": { "$ref": "#/components/responses/Conflicto" },
+          "422": { "$ref": "#/components/responses/EntidadInvalida" },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/solicitudes/{id}/documentos/{plantilla}": {
+      "put": {
+        "tags": ["Solicitudes"],
+        "summary": "Adjuntar o reemplazar un documento PDF de un requisito",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/IdSolicitud" },
+          { "name": "plantilla", "in": "path", "required": true, "schema": { "type": "string" }, "description": "Identificador de la plantilla del requisito." }
+        ],
+        "requestBody": { "required": true, "content": { "application/pdf": { "schema": { "type": "string", "format": "binary" } } } },
+        "responses": {
+          "200": { "description": "Solicitud actualizada con el documento adjunto." },
+          "401": { "$ref": "#/components/responses/NoAutorizado" },
+          "403": { "$ref": "#/components/responses/Prohibido" },
+          "404": { "$ref": "#/components/responses/NoEncontrado" },
+          "409": { "$ref": "#/components/responses/Conflicto" },
+          "415": { "description": "El cuerpo no es un PDF válido o supera el límite indicado por el servidor." },
+          "422": { "$ref": "#/components/responses/EntidadInvalida" },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/solicitudes/{id}/subsanar": {
+      "post": {
+        "tags": ["Solicitudes"],
+        "summary": "Enviar la subsanación de una solicitud observada",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/IdSolicitud" }],
+        "responses": {
+          "200": { "description": "Solicitud actualizada." },
+          "401": { "$ref": "#/components/responses/NoAutorizado" },
+          "403": { "$ref": "#/components/responses/Prohibido" },
+          "404": { "$ref": "#/components/responses/NoEncontrado" },
+          "409": { "$ref": "#/components/responses/Conflicto" },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/solicitudes/{id}/documentos/{documento}": {
+      "get": {
+        "tags": ["Solicitudes"],
+        "summary": "Descargar un documento de una solicitud propia",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/IdSolicitud" },
+          { "$ref": "#/components/parameters/DocumentoId" }
+        ],
+        "responses": {
+          "200": { "description": "Archivo PDF descargable.", "content": { "application/pdf": { "schema": { "type": "string", "format": "binary" } } } },
+          "401": { "$ref": "#/components/responses/NoAutorizado" },
+          "403": { "$ref": "#/components/responses/Prohibido" },
+          "404": { "$ref": "#/components/responses/NoEncontrado" },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/revision-grados": {
+      "get": {
+        "tags": ["Revisión de grados"],
+        "summary": "Listar expedientes presentados para revisión",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "pagina", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "tipos", "in": "query", "description": "Lista de tipos de trámite separados por coma.", "schema": { "type": "string" } },
+          { "name": "buscar", "in": "query", "schema": { "type": "string" } },
+          { "name": "estado", "in": "query", "schema": { "type": "string", "enum": ["en_revision", "observado", "aprobado", "emitido"] } }
+        ],
+        "responses": {
+          "200": { "description": "Devuelve `datos`, `siguiente` y `puedeAprobar`." },
+          "401": { "$ref": "#/components/responses/NoAutorizado" },
+          "403": { "$ref": "#/components/responses/Prohibido" },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/revision-grados/reporte": {
+      "get": {
+        "tags": ["Revisión de grados"],
+        "summary": "Consultar el reporte agrupado de expedientes",
+        "security": [{ "cookieAuth": [] }],
+        "responses": {
+          "200": { "description": "Arreglo de totales por tipo de trámite y estado." },
+          "401": { "$ref": "#/components/responses/NoAutorizado" },
+          "403": { "$ref": "#/components/responses/Prohibido" },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/revision-grados/{id}/documentos/{documento}": {
+      "get": {
+        "tags": ["Revisión de grados"],
+        "summary": "Descargar un documento de un expediente presentado",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/IdSolicitud" },
+          { "$ref": "#/components/parameters/DocumentoId" }
+        ],
+        "responses": {
+          "200": { "description": "Archivo PDF descargable.", "content": { "application/pdf": { "schema": { "type": "string", "format": "binary" } } } },
+          "401": { "$ref": "#/components/responses/NoAutorizado" },
+          "403": { "$ref": "#/components/responses/Prohibido" },
+          "404": { "$ref": "#/components/responses/NoEncontrado" },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/revision-grados/{id}/acciones": {
+      "post": {
+        "tags": ["Revisión de grados"],
+        "summary": "Aplicar una acción de revisión a un expediente",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/IdSolicitud" }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AccionRevision" } } } },
+        "responses": {
+          "200": { "description": "Expediente actualizado." },
+          "400": { "$ref": "#/components/responses/SolicitudInvalida" },
+          "401": { "$ref": "#/components/responses/NoAutorizado" },
+          "403": { "$ref": "#/components/responses/Prohibido" },
+          "404": { "$ref": "#/components/responses/NoEncontrado" },
+          "409": { "$ref": "#/components/responses/Conflicto" },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/administracion/configuracion": {
+      "get": {
+        "tags": ["Administración"],
+        "summary": "Consultar datos de configuración del sistema",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "200": { "description": "Devuelve nombre del sistema y valores informativos de sesión y carga." }, "401": { "$ref": "#/components/responses/NoAutorizado" }, "403": { "$ref": "#/components/responses/Prohibido" }, "default": { "$ref": "#/components/responses/Error" } }
+      }
+    },
+    "/api/administracion/programas": {
+      "get": {
+        "tags": ["Administración"],
+        "summary": "Listar programas",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "200": { "description": "Arreglo de programas." }, "401": { "$ref": "#/components/responses/NoAutorizado" }, "403": { "$ref": "#/components/responses/Prohibido" }, "default": { "$ref": "#/components/responses/Error" } }
+      },
+      "post": {
+        "tags": ["Administración"],
+        "summary": "Crear un programa",
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/NuevoPrograma" } } } },
+        "responses": { "201": { "description": "Programa creado." }, "400": { "$ref": "#/components/responses/SolicitudInvalida" }, "401": { "$ref": "#/components/responses/NoAutorizado" }, "403": { "$ref": "#/components/responses/Prohibido" }, "default": { "$ref": "#/components/responses/Error" } }
+      }
+    },
+    "/api/administracion/estudiantes": {
+      "get": {
+        "tags": ["Administración"],
+        "summary": "Listar estudiantes por página",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/Pagina" }],
+        "responses": { "200": { "description": "Devuelve `datos` y `siguiente`." }, "401": { "$ref": "#/components/responses/NoAutorizado" }, "403": { "$ref": "#/components/responses/Prohibido" }, "default": { "$ref": "#/components/responses/Error" } }
+      }
+    },
+    "/api/administracion/usuarios": {
+      "get": {
+        "tags": ["Administración"],
+        "summary": "Listar usuarios por página",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/Pagina" }],
+        "responses": { "200": { "description": "Devuelve `datos` y `siguiente`." }, "401": { "$ref": "#/components/responses/NoAutorizado" }, "403": { "$ref": "#/components/responses/Prohibido" }, "default": { "$ref": "#/components/responses/Error" } }
+      },
+      "post": {
+        "tags": ["Administración"],
+        "summary": "Crear un usuario",
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/NuevoUsuario" } } } },
+        "responses": { "201": { "description": "Usuario creado sin exponer el hash de contraseña." }, "400": { "$ref": "#/components/responses/SolicitudInvalida" }, "401": { "$ref": "#/components/responses/NoAutorizado" }, "403": { "$ref": "#/components/responses/Prohibido" }, "409": { "$ref": "#/components/responses/Conflicto" }, "default": { "$ref": "#/components/responses/Error" } }
+      }
+    },
+    "/api/administracion/requisitos": {
+      "get": {
+        "tags": ["Administración"],
+        "summary": "Listar requisitos",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "200": { "description": "Arreglo de requisitos." }, "401": { "$ref": "#/components/responses/NoAutorizado" }, "403": { "$ref": "#/components/responses/Prohibido" }, "default": { "$ref": "#/components/responses/Error" } }
+      },
+      "post": {
+        "tags": ["Administración"],
+        "summary": "Crear un requisito",
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/NuevoRequisito" } } } },
+        "responses": { "201": { "description": "Identificador del requisito creado." }, "400": { "$ref": "#/components/responses/SolicitudInvalida" }, "401": { "$ref": "#/components/responses/NoAutorizado" }, "403": { "$ref": "#/components/responses/Prohibido" }, "409": { "$ref": "#/components/responses/Conflicto" }, "default": { "$ref": "#/components/responses/Error" } }
+      }
+    },
+    "/api/administracion/auditoria": {
+      "get": {
+        "tags": ["Administración"],
+        "summary": "Consultar eventos de auditoría por página",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/Pagina" }],
+        "responses": { "200": { "description": "Devuelve `datos` y `siguiente`." }, "401": { "$ref": "#/components/responses/NoAutorizado" }, "403": { "$ref": "#/components/responses/Prohibido" }, "default": { "$ref": "#/components/responses/Error" } }
+      }
+    },
+    "/api/documentos/verificar-qr/{codigo}": {
+      "get": {
+        "tags": ["Verificación de documentos"],
+        "summary": "Verificar un documento emitido mediante su código",
+        "parameters": [
+          { "name": "codigo", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "tipo", "in": "query", "required": false, "schema": { "type": "string", "enum": ["grado_maestro", "grado_doctor", "titulo_segunda_especialidad", "certificado_diplomado", "certificacion_modulos"] } }
+        ],
+        "responses": {
+          "200": { "description": "Datos públicos del documento emitido verificado." },
+          "400": { "$ref": "#/components/responses/SolicitudInvalida" },
+          "404": { "$ref": "#/components/responses/NoEncontrado" },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "cookieAuth": { "type": "apiKey", "in": "cookie", "name": "sigep_sesion", "description": "Cookie HTTP-only emitida por `POST /api/auth/login` o el callback de Google." }
+    },
+    "parameters": {
+      "Tramite": { "name": "tramite", "in": "path", "required": true, "schema": { "type": "string", "enum": ["grado_maestro", "grado_doctor", "titulo_segunda_especialidad", "certificado_diplomado", "certificacion_modulos"] } },
+      "ProgramaId": { "name": "programaId", "in": "path", "required": true, "schema": { "type": "integer", "minimum": 1 } },
+      "IdSolicitud": { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } },
+      "DocumentoId": { "name": "documento", "in": "path", "required": true, "schema": { "type": "integer" } },
+      "Pagina": { "name": "pagina", "in": "query", "required": false, "schema": { "type": "integer", "default": 1 } }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": { "error": { "type": "string" } },
+        "required": ["error"]
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": ["password"],
+        "properties": {
+          "dni": { "type": "string", "description": "DNI de 8 dígitos; se usa como identificador cuando es válido." },
+          "email": { "type": "string", "format": "email", "description": "Correo registrado, usado como identificador cuando el DNI no es válido." },
+          "password": { "type": "string", "format": "password" }
+        }
+      },
+      "NuevaSolicitud": {
+        "type": "object",
+        "required": ["tipoTramite"],
+        "properties": { "tipoTramite": { "type": "string", "enum": ["grado_maestro", "grado_doctor", "titulo_segunda_especialidad", "certificado_diplomado", "certificacion_modulos"] } }
+      },
+      "NuevoPrograma": {
+        "type": "object",
+        "required": ["nombre", "facultad", "tipo"],
+        "properties": { "nombre": { "type": "string" }, "facultad": { "type": "string" }, "tipo": { "type": "string", "enum": ["maestria", "doctorado", "segunda_especialidad", "diplomado", "certificacion_modulos"] } }
+      },
+      "NuevoUsuario": {
+        "type": "object",
+        "required": ["nombres", "apellidos", "dni", "email", "rol", "password"],
+        "properties": {
+          "nombres": { "type": "string" },
+          "apellidos": { "type": "string" },
+          "dni": { "type": "string" },
+          "email": { "type": "string", "format": "email" },
+          "rol": { "type": "string", "enum": ["estudiante", "operador", "administrador"] },
+          "password": { "type": "string", "format": "password" },
+          "codigoUniv": { "type": "string", "description": "Requerido para cuentas de estudiante." },
+          "programaId": { "type": "integer", "description": "Requerido para cuentas de estudiante." }
+        }
+      },
+      "NuevoRequisito": {
+        "type": "object",
+        "required": ["programaId", "codigo", "nombre", "descripcion", "tipo", "versionNorm"],
+        "properties": {
+          "programaId": { "type": "integer" },
+          "codigo": { "type": "string" },
+          "nombre": { "type": "string" },
+          "descripcion": { "type": "string" },
+          "tipo": { "type": "string", "enum": ["academico", "documental", "pago", "idioma", "otro"] },
+          "versionNorm": { "type": "string" }
+        }
+      },
+      "AccionRevision": {
+        "type": "object",
+        "required": ["accion"],
+        "properties": {
+          "accion": { "type": "string", "enum": ["revisar", "observar", "validar", "aprobar", "emitir"] },
+          "requisitoId": { "type": "integer" },
+          "comentario": { "type": "string" }
+        }
+      }
+    },
+    "responses": {
+      "Error": { "description": "Error no detallado específicamente por el handler.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+      "SolicitudInvalida": { "description": "Los datos de la solicitud no son válidos.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+      "NoAutorizado": { "description": "La sesión falta, no es válida o no está habilitada.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+      "Prohibido": { "description": "La cuenta no tiene acceso a esta operación.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+      "NoEncontrado": { "description": "No se encontró el recurso solicitado.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+      "Conflicto": { "description": "La operación no es válida para el estado actual o el recurso ya existe.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+      "EntidadInvalida": { "description": "El contenido es válido sintácticamente, pero no puede procesarse en el estado o contexto actual.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+      "NoDisponible": { "description": "El servicio requerido no está configurado o disponible.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+    }
+  }
+}

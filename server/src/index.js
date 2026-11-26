@@ -4,6 +4,8 @@ const { readFileSync } = require("node:fs");
 const { pathToFileURL } = require("node:url");
 const cors = require("cors");
 const express = require("express");
+const swaggerUi = require("swagger-ui-express");
+const openapi = require("../openapi.json");
 const { PrismaClient } = require("@prisma/client");
 const { PrismaLibSql } = require("@prisma/adapter-libsql");
 const { leerNormativa, registrarCatalogo } = require("./catalogo-grados");
@@ -36,6 +38,7 @@ app.use("/api", (req, res, next) => {
   next();
 });
 app.use(express.json({ limit: "32kb" }));
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(openapi));
 const normativa = process.env.SIGEP_NORMATIVA_PATH
   ? leerNormativa(readFileSync(process.env.SIGEP_NORMATIVA_PATH, "utf8"))
   : undefined;
