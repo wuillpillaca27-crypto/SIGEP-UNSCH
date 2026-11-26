@@ -15,6 +15,7 @@ datasource db {
 // ══════════════════════════════════════════════════════════════
 
 model Usuario {
+  puedeAprobar Boolean @default(false)
   id          Int       @id @default(autoincrement())
   nombres     String
   apellidos   String
@@ -32,6 +33,7 @@ model Usuario {
   revisiones    Revision[]    @relation("RevisionRevisor")
   auditorias    Auditoria[]
   validaciones  ValidacionRequisito[] @relation("ValidacionResponsable")
+  cambiosAcademicos CambioAcademico[]
   documentosSubidos DocumentoSolicitud[] @relation("DocumentoSubidoPor")
 
   @@map("usuarios")
@@ -59,8 +61,37 @@ model Programa {
   estudiantes Estudiante[]
   solicitudes Solicitud[]
   plantillasRequisito PlantillaRequisito[]
+  configuracionTramite ConfiguracionTramite?
+  cambiosAcademicos CambioAcademico[]
 
   @@map("programas")
+}
+
+model ConfiguracionTramite {
+  programaId Int @id
+  tipoTramite TipoTramite
+  habilitado Boolean @default(false)
+  fuente String?
+  costos String?
+  plazos String?
+  procedimiento String?
+  programa Programa @relation(fields: [programaId], references: [id])
+
+  @@map("configuraciones_tramite")
+}
+
+model CambioAcademico {
+  id Int @id @default(autoincrement())
+  programaId Int
+  usuarioId Int
+  accion String
+  detalles Json
+  creadoEn DateTime @default(now())
+  programa Programa @relation(fields: [programaId], references: [id])
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@index([programaId, id])
+  @@map("cambios_academicos")
 }
 
 enum TipoPrograma {

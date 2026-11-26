@@ -1,9 +1,22 @@
 const express = require("express");
 const { resolve } = require("node:path");
-const { detalle, tiposGrado } = require("./solicitudes");
+const { randomUUID } = require("node:crypto");
+const { mkdir, writeFile, unlink } = require("node:fs/promises");
+const { detalle, tiposGrado, pdfValido } = require("./solicitudes");
 
 const alcance = { presentadoEn: { not: null }, tipoTramite: { in: tiposGrado } };
 const seleccion = { ...detalle, usuario: { select: { nombres: true, apellidos: true } } };
+const accionesAutoridad = ["aprobar", "rechazar", "preparar_emision", "emitir", "anular"];
+const etapas = {
+  revisar: { desde: ["presentado"], hacia: "en_revision", registro: "iniciar_revision" },
+  finalizar_validacion: { desde: ["en_revision"], hacia: "validado", registro: "validar" },
+  remitir: { desde: ["validado"], hacia: "pendiente_aprobacion", registro: "validar" },
+  aprobar: { desde: ["pendiente_aprobacion"], hacia: "aprobado", registro: "aprobar" },
+  rechazar: { desde: ["pendiente_aprobacion"], hacia: "rechazado", registro: "rechazar" },
+  preparar_emision: { desde: ["aprobado"], hacia: "en_emision", registro: "emitir" },
+  emitir: { desde: ["en_emision"], hacia: "emitido", registro: "emitir" },
+  anular: { desde: ["aprobado", "en_emision", "emitido"], hacia: "anulado", registro: "anular" },
+};
 
 function registrarRevision(app, prisma, autenticar, directorio) {
   const router = express.Router();
@@ -29,7 +42,7 @@ function registrarRevision(app, prisma, autenticar, directorio) {
       select: seleccion, skip: (pagina - 1) * 20, take: 21,
       orderBy: [{ presentadoEn: "desc" }, { id: "desc" }],
     });
-    return res.json({ datos: datos.slice(0, 20), siguiente: datos.length > 20, puedeAprobar: req.usuario.rol === "administrador" });
+    return res.json({ datos: datos.slice(0, 20), siguiente: datos.length > 20, puedeAprobar: req.usuario.puedeAprobar });
   });
 
   router.get("/reporte", async (_req, res) => {
@@ -49,14 +62,22 @@ function registrarRevision(app, prisma, autenticar, directorio) {
     return res.download(resolve(directorio, documento.rutaArchivo), documento.nombreArchivo);
   });
 
-  router.post("/:id/acciones", async (req, res) => {
+  router.post("/:id/acciones", express.raw({ type: "application/pdf", limit: "10mb" }), async (req, res) => {
     const id = Number(req.params.id);
-    const { accion, requisitoId, comentario } = req.body ?? {};
+    const pdf = req.is("application/pdf") ? req.body : null;
+    if (pdf !== null && !pdfValido(pdf)) return res.status(415).json({ error: "Adjunta un PDF válido de hasta 10 MB." });
+    let referencia;
+    if (pdf) {
+      try { referencia = decodeURIComponent(req.get("x-sigep-referencia") ?? ""); }
+      catch { return res.status(400).json({ error: "La referencia de emisión no es válida." }); }
+    }
+    const { accion, requisitoId, comentario } = pdf ? { accion: "emitir", comentario: referencia } : req.body ?? {};
     const nota = typeof comentario === "string" ? comentario.trim() : "";
-    if (!Number.isSafeInteger(id) || nota.length > 1500 || !["revisar", "observar", "validar", "aprobar", "emitir"].includes(accion)) {
+    if (!Number.isSafeInteger(id) || nota.length > 1500 || (!Object.hasOwn(etapas, accion) && !["observar", "validar"].includes(accion))) {
       return res.status(400).json({ error: "La acción o los datos de revisión son inválidos" });
     }
-    if (["aprobar", "emitir"].includes(accion) && req.usuario.rol !== "administrador") return res.status(403).json({ error: "Solo un administrador puede aprobar o registrar una emisión" });
+    if (accionesAutoridad.includes(accion) && !req.usuario.puedeAprobar) return res.status(403).json({ error: "La acción requiere autorización académica expresa" });
+    let rutaPDF;
     const resultado = await prisma.$transaction(async (db) => {
       const caso = await db.solicitud.findFirst({ where: { ...alcance, id }, select: seleccion });
       if (!caso) return { status: 404, error: "Expediente no encontrado" };
@@ -64,9 +85,14 @@ function registrarRevision(app, prisma, autenticar, directorio) {
       const editable = ["en_revision", "observado"].includes(caso.estado);
       let estado = caso.estado;
       let accionRevision;
-      if (accion === "revisar" && estado === "presentado") {
-        estado = "en_revision";
-        accionRevision = "iniciar_revision";
+      const etapa = Object.hasOwn(etapas, accion) ? etapas[accion] : null;
+      const requisitosCumplidos = caso.validaciones.length > 0 && caso.validaciones.every(
+        (item) => !item.plantilla.obligatorio || ["cumplido", "no_aplica"].includes(item.estado)
+      );
+      if (etapa?.desde.includes(estado) && (!accionesAutoridad.includes(accion) || nota) &&
+          (!["finalizar_validacion", "remitir", "aprobar"].includes(accion) || requisitosCumplidos)) {
+        estado = etapa.hacia;
+        accionRevision = etapa.registro;
       } else if (accion === "observar" && editable && requisito?.plantilla.tipo === "documental" && nota) {
         estado = "observado";
         accionRevision = "solicitar_subsanacion";
@@ -74,14 +100,6 @@ function registrarRevision(app, prisma, autenticar, directorio) {
         requisito.plantilla.tipo !== "documental" || caso.documentos.some((doc) => doc.tipoDoc === String(requisito.plantilla.id))
       )) {
         accionRevision = "validar";
-      } else if (accion === "aprobar" && estado === "en_revision" && caso.validaciones.every(
-        (item) => !item.plantilla.obligatorio || ["cumplido", "no_aplica"].includes(item.estado)
-      )) {
-        estado = "aprobado";
-        accionRevision = "aprobar";
-      } else if (accion === "emitir" && estado === "aprobado" && nota) {
-        estado = "emitido";
-        accionRevision = "emitir";
       } else {
         return { status: 409, error: "Revisa la etapa, la evidencia y los datos de la acción" };
       }
@@ -90,6 +108,17 @@ function registrarRevision(app, prisma, autenticar, directorio) {
         data: { estado, actualizadoEn: new Date(), ...(accion === "observar" && { observaciones: nota }), ...(accion === "aprobar" && { aprobadoEn: new Date() }) },
       });
       if (!actualizado.count) return { status: 409, error: "El expediente cambió durante la revisión" };
+      if (pdf) {
+        const archivo = randomUUID() + ".pdf";
+        const ruta = resolve(directorio, archivo);
+        await mkdir(directorio, { recursive: true, mode: 0o700 });
+        await writeFile(ruta, pdf, { flag: "wx", mode: 0o600 });
+        rutaPDF = ruta;
+        await db.documentoSolicitud.create({ data: {
+          solicitudId: id, tipoDoc: "documento_emitido", nombre: "Documento emitido",
+          nombreArchivo: archivo, rutaArchivo: archivo, mimeType: "application/pdf", tamanoBytes: pdf.length, subidoPor: req.usuario.id,
+        } });
+      }
       if (accion === "observar" || accion === "validar") {
         await db.validacionRequisito.update({
           where: { id: requisito.id },
@@ -99,17 +128,20 @@ function registrarRevision(app, prisma, autenticar, directorio) {
         });
       }
       if (estado !== caso.estado) await db.historialEstado.create({ data: {
-        solicitudId: id, estadoAntes: caso.estado, estadoDespues: estado, motivo: ["observar", "emitir"].includes(accion) ? nota : null,
+        solicitudId: id, estadoAntes: caso.estado, estadoDespues: estado, motivo: nota || accion,
       } });
       await db.revision.create({ data: {
         solicitudId: id, revisorId: req.usuario.id, accion: accionRevision, comentario: nota || null,
         estadoAntes: caso.estado, estadoDespues: estado,
       } });
       await db.auditoria.create({ data: {
-        usuarioId: req.usuario.id, accion: accionRevision, entidad: "solicitud", entidadId: id,
+        usuarioId: req.usuario.id, accion, entidad: "solicitud", entidadId: id,
         detalles: requisito ? JSON.stringify({ requisitoId: requisito.id }) : null,
       } });
       return { caso: await db.solicitud.findFirst({ where: { id }, select: seleccion }) };
+    }).catch(async (error) => {
+      if (rutaPDF) await unlink(rutaPDF).catch(() => {});
+      throw error;
     });
     return resultado.error ? res.status(resultado.status).json({ error: resultado.error }) : res.json(resultado.caso);
   });

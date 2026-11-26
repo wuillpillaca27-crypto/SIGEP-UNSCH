@@ -17,3 +17,11 @@
 - PostgreSQL de desarrollo contiene una maestría activa, una matrícula asociada y una plantilla activa. El flujo de los demás tipos se verifica con datos de prueba.
 - Las páginas públicas de Maestro, Doctor, Segunda Especialidad, Diplomados y Verificar documento devolvieron HTTP 200 sin cookie.
 - Jest verificó el retorno autenticado, la validación de destinos de Google, el catálogo público, la separación de fixtures, los permisos, la creación concurrente de borradores, los archivos y el seguimiento.
+
+## Conexión local
+
+En `server/`, el comando `npm run local` aplica las migraciones pendientes a la base configurada mediante `DATABASE_URL` y arranca la API. En `client/`, `npm run dev` arranca el portal. Los puertos predeterminados son 8000 para Express y 3000 para Next.js. Si se cambia el puerto de Express, configurar `SIGEP_API_URL` con la URL completa que termina en `/api` antes de iniciar o compilar el cliente. Los POST del portal pasan por el mismo origen y mantienen los controles de `CLIENT_ORIGINS`.
+
+La consulta de solo lectura `GET /api/sigep/salud` desde Next.js devuelve 200 si se puede consultar PostgreSQL. Sin cookie, `GET /api/sigep/auth/perfil` devuelve 401 con `SESION_AUSENTE`. Durante la prueba de caída de Express, el proxy devolvió HTTP 500. Al dirigir una instancia auxiliar a un puerto PostgreSQL sin servicio, los registros reportaron `ECONNREFUSED` y la API devolvió 503 con `BASE_DATOS_NO_DISPONIBLE`.
+
+El portal habitual confirmó el catálogo, el control de origen, las rutas privadas y la respuesta pública para un código de documento inexistente. Las pruebas HTTP de las cinco solicitudes usaron Next.js, Express y PostgreSQL en la base aislada. Pasaron 69 pruebas de cliente, 61 de servidor y la compilación de Next.js.

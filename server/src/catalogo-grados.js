@@ -1,5 +1,5 @@
-const { tipoPorPrograma } = require("./solicitudes");
-const { facultadDemostracion, programasVisibles, requisitosVisibles } = require("./datos-demostracion");
+const { tipoPorPrograma, configuracionHabilitada } = require("./solicitudes");
+const { facultadesDemostracion, programasVisibles, requisitosVisibles } = require("./datos-demostracion");
 
 const tipos = new Map(Object.entries(tipoPorPrograma).map(([programa, tramite]) => [tramite, programa]));
 
@@ -27,7 +27,7 @@ function registrarCatalogo(app, prisma, normativa = new Map()) {
     if (!tipo) return res.status(404).json({ error: "Trámite desconocido" });
 
     const datos = await prisma.programa.findMany({
-      where: { activo: true, tipo, ...programasVisibles() },
+      where: { activo: true, tipo, ...programasVisibles(), ...configuracionHabilitada(req.params.tramite) },
       select: { id: true, nombre: true },
       orderBy: [{ nombre: "asc" }, { id: "asc" }],
     });
@@ -43,9 +43,10 @@ function registrarCatalogo(app, prisma, normativa = new Map()) {
     }
 
     const programa = await prisma.programa.findFirst({
-      where: { id, tipo, activo: true, ...programasVisibles() },
+      where: { id, tipo, activo: true, ...programasVisibles(), ...configuracionHabilitada(tipoTramite) },
       select: {
         facultad: true,
+        configuracionTramite: { select: { fuente: true, costos: true, plazos: true, procedimiento: true } },
         plantillasRequisito: {
           where: { activo: true, tipoTramite, ...requisitosVisibles() },
           select: { id: true, nombre: true, descripcion: true, tipo: true, obligatorio: true, versionNorm: true },
@@ -54,10 +55,11 @@ function registrarCatalogo(app, prisma, normativa = new Map()) {
       },
     });
     if (!programa) return res.status(404).json({ error: "Programa desconocido" });
-    if (programa.facultad === facultadDemostracion) {
+    if (facultadesDemostracion.includes(programa.facultad)) {
       return res.json({ requisitos: programa.plantillasRequisito, demostracion: true });
     }
-    return res.json({ requisitos: programa.plantillasRequisito, ...normativa.get(`${tipoTramite}/${id}`) });
+    return res.json({ requisitos: programa.plantillasRequisito,
+      ...(programa.configuracionTramite ?? normativa.get(`${tipoTramite}/${id}`)) });
   });
 }
 

@@ -69,14 +69,16 @@ async function crearContexto() {
       await tx.validacionRequisito.deleteMany();
       await tx.solicitud.deleteMany();
       await tx.plantillaRequisito.deleteMany();
+      await tx.configuracionTramite.deleteMany();
+      await tx.cambioAcademico.deleteMany();
       await tx.estudiante.deleteMany();
       await tx.programa.deleteMany();
       await tx.usuario.deleteMany();
       await tx.programa.create({ data: { id: 1, nombre: "Doctorado de prueba", tipo: "doctorado", facultad: "Ciencias" } });
       const hash = bcrypt.hashSync(clave, 4);
-      await tx.usuario.createMany({ data: [1, 2, 3, 4].map((id) => ({ id, nombres: "Cuenta" + id, apellidos: "Prueba", dni: String(id).padStart(8, "0"), email: "cuenta" + id + "@test.invalid", password: hash, rol: id <= 2 ? "estudiante" : id === 3 ? "operador" : "administrador" })) });
+      await tx.usuario.createMany({ data: [1, 2, 3, 4, 5].map((id) => ({ id, nombres: "Cuenta" + id, apellidos: "Prueba", dni: String(id).padStart(8, "0"), email: "cuenta" + id + "@test.invalid", password: hash, rol: id <= 2 ? "estudiante" : id === 3 ? "operador" : "administrador", puedeAprobar: id === 4 })) });
       await tx.estudiante.createMany({ data: [1, 2].map((id) => ({ id, usuarioId: id, codigoUniv: "TEST" + id, programaId: 1 })) });
-      await tx.plantillaRequisito.create({ data: { id: 1, programaId: 1, tipoTramite: "grado_doctor", codigo: "REQ-SOLICITUD", nombre: "Documento de prueba", descripcion: "Descripci?n", tipo: "documental" } });
+      await tx.plantillaRequisito.create({ data: { id: 1, programaId: 1, tipoTramite: "grado_doctor", codigo: "REQ-SOLICITUD", nombre: "Documento de prueba", descripcion: "Descripción", tipo: "documental" } });
     });
     await fixture.sincronizarSecuencias();
   }
@@ -106,7 +108,11 @@ async function aprobarSolicitud(ctx, token, operador, admin) {
   await ctx.pedir(ruta + "/documentos/1", 200, { token, metodo: "PUT", pdf });
   await ctx.pedir(ruta + "/subsanar", 200, { token, metodo: "POST" });
   await ctx.pedir(accion, 200, { token: operador, metodo: "POST", datos: { accion: "validar", requisitoId, comentario: "Evidencia cotejada" } });
-  await ctx.pedir(accion, 200, { token: admin, metodo: "POST", datos: { accion: "aprobar" } });
+  await ctx.pedir(accion, 200, { token: operador, metodo: "POST", datos: { accion: "finalizar_validacion" } });
+  await ctx.pedir(accion, 200, { token: operador, metodo: "POST", datos: { accion: "remitir" } });
+  const tecnico = await ctx.ingresar(5);
+  await ctx.pedir(accion, 403, { token: tecnico, metodo: "POST", datos: { accion: "aprobar", comentario: "Prueba" } });
+  await ctx.pedir(accion, 200, { token: admin, metodo: "POST", datos: { accion: "aprobar", comentario: "Resolución de prueba" } });
   return { solicitud, ruta, accion, presentado };
 }
 
@@ -263,7 +269,7 @@ describe("Solicitudes, revisión e identidad", () => {
     const admin = await ctx.ingresar(4);
     const { solicitud, accion } = await aprobarSolicitud(ctx, token, operador, admin);
     await ctx.pedir(accion, 403, { token: operador, metodo: "POST", datos: { accion: "aprobar" } });
-    assert.equal(await ctx.prisma.auditoria.count({ where: { entidadId: solicitud.id } }), 8);
+    assert.equal(await ctx.prisma.auditoria.count({ where: { entidadId: solicitud.id } }), 10);
     expect(await ctx.pedir("/revision-grados/reporte", 200, { token: admin })).toEqual([
       { tipoTramite: "grado_doctor", estado: "aprobado", total: 1 },
     ]);
@@ -280,6 +286,7 @@ describe("Solicitudes, revisión e identidad", () => {
     await ctx.pedir("/documentos/verificar-qr/%3F", 400);
     await ctx.pedir(accion, 403, { token: operador, metodo: "POST", datos: { accion: "emitir", comentario: "Referencia de prueba" } });
     await ctx.pedir(accion, 409, { token: admin, metodo: "POST", datos: { accion: "emitir" } });
+    await ctx.pedir(accion, 200, { token: admin, metodo: "POST", datos: { accion: "preparar_emision", comentario: "Resolución de prueba" } });
     await ctx.pedir(accion, 200, { token: admin, metodo: "POST", datos: { accion: "emitir", comentario: "Referencia de prueba" } });
     const verificado = await ctx.pedir(verificacion, 200);
     expect(Object.keys(verificado).sort()).toEqual(["codigo", "demostracion", "emitidoEn", "programa", "tipoTramite"]);

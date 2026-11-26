@@ -9,6 +9,7 @@
     "db:init": "node scripts/inicializar-base.js",
     "db:generate": "prisma generate",
     "db:seed:load": "node scripts/sembrar-carga.js",
+    "db:seed:demo": "node scripts/sembrar-demo.js",
     "test": "jest --coverage"
   },
   "keywords": [],

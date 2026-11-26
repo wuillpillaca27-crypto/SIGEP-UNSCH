@@ -193,8 +193,25 @@ describe("Administración", () => {
     expect((await ctx.pedir("/administracion/auditoria?pagina=2", { rol: "administrador" })).body.datos).toHaveLength(1);
   });
 
+  test("publica un requisito, habilita su trámite y guarda el historial sin permitir gestión a operadores", async () => {
+    const datos = { programaId: 1, codigo: "REQ-V2-CONFIG", nombre: "PDF de prueba", descripcion: "Fixture local", tipo: "documental", versionNorm: "v2", activo: false, obligatorio: false };
+    const alta = await ctx.pedir("/administracion/requisitos", { rol: "administrador", metodo: "POST", datos });
+    expect(alta.status).toBe(201);
+    const ruta = "/administracion/configuracion-academica/1";
+    const publicacion = `/administracion/requisitos/${alta.body.id}/publicacion`;
+    const configuracion = { nombre: "Doctorado de prueba", facultad: "Ciencias", activo: true, habilitado: true,
+      tipoTramite: "grado_doctor", fuente: "Referencia de prueba", costos: "", plazos: "", procedimiento: "" };
+    expect((await ctx.pedir(publicacion, { rol: "operador", metodo: "PATCH", datos: { activo: true } })).status).toBe(403);
+    expect((await ctx.pedir(publicacion, { rol: "administrador", metodo: "PATCH", datos: { activo: true } })).status).toBe(200);
+    expect((await ctx.pedir(ruta, { rol: "administrador", metodo: "PATCH", datos: configuracion })).status).toBe(200);
+    const detalle = await ctx.pedir(ruta, { rol: "administrador" });
+    expect(detalle.body.configuracionTramite).toMatchObject({ habilitado: true, tipoTramite: "grado_doctor" });
+    expect(detalle.body.plantillasRequisito).toEqual(expect.arrayContaining([expect.objectContaining({ id: alta.body.id, obligatorio: false, activo: true })]));
+    expect(detalle.body.cambiosAcademicos.map(({ accion }) => accion)).toEqual(["configurar_tramite", "publicar_requisito", "crear_requisito"]);
+  });
+
   test("delega errores Prisma no P2002 al manejador global vigente", async () => {
-    const falloPrisma = jest.spyOn(ctx.prisma.programa, "create").mockRejectedValue(new Error("fallo sintético de Prisma"));
+    const falloPrisma = jest.spyOn(ctx.prisma, "$transaction").mockRejectedValue(new Error("fallo sintético de Prisma"));
     try {
       const respuesta = await ctx.pedir("/administracion/programas", {
         rol: "administrador", metodo: "POST", datos: { nombre: "Error Prisma", facultad: "Pruebas", tipo: "doctorado" },

@@ -23,8 +23,15 @@ const tramitesPorPrograma = {
   ...certificacionesPorPrograma,
 };
 const tiposCertificacion = ["certificado_diplomado", "certificacion_modulos"];
+const pdfValido = (pdf) => Buffer.isBuffer(pdf) &&
+  /^%PDF-\d\.\d(?:\r|\n)/.test(pdf.subarray(0, 12).toString("ascii")) &&
+  /%%EOF\s*$/.test(pdf.subarray(-1024).toString("ascii"));
+const configuracionHabilitada = (tipoTramite) => ({
+  OR: [{ configuracionTramite: null }, { configuracionTramite: { habilitado: true, tipoTramite } }],
+});
 const filtroPlantillasActivas = (programaId, tipoTramite) => ({
-  programaId, tipoTramite, activo: true, ...requisitosVisibles(), programa: programasVisibles(),
+  programaId, tipoTramite, activo: true, ...requisitosVisibles(),
+  programa: { activo: true, ...programasVisibles(), ...configuracionHabilitada(tipoTramite) },
 });
 
 async function puedeEditarBorrador(db, estudiante, solicitud) {
@@ -73,12 +80,21 @@ function registrarSolicitudes(app, prisma, autenticar, directorio) {
     if (soloCertificaciones && !tiposCertificacion.includes(tipoTramite)) {
       return res.json({ programas: [], programaRegistrado, motivo: "tipo_no_certificable" });
     }
+    const configuracion = await prisma.configuracionTramite.findUnique({ where: { programaId: programa.id } });
+    if (configuracion && (!configuracion.habilitado || configuracion.tipoTramite !== tipoTramite)) {
+      return res.json({ programas: [], programaRegistrado, motivo: "tramite_deshabilitado" });
+    }
     const requisitos = await prisma.plantillaRequisito.findMany({
       where: filtroPlantillasActivas(programa.id, tipoTramite),
       select: { id: true, nombre: true, descripcion: true, tipo: true, obligatorio: true, versionNorm: true },
       orderBy: [{ orden: "asc" }, { id: "asc" }],
     });
-    if (!requisitos.length) return res.json({ programas: [], programaRegistrado, motivo: "sin_requisitos_activos" });
+    if (!requisitos.length) {
+      const inédita = await prisma.plantillaRequisito.findFirst({
+        where: { programaId: programa.id, tipoTramite, activo: false, ...requisitosVisibles(), programa: programasVisibles() }, select: { id: true },
+      });
+      return res.json({ programas: [], programaRegistrado, motivo: inédita && !soloCertificaciones ? "plantilla_no_publicada" : "sin_requisitos_activos" });
+    }
     const opciones = [{ ...tramitesPorPrograma[programa.tipo], tipoTramite, requisitos }];
     return res.json({
       programas: [{ ...programaRegistrado, [soloCertificaciones ? "certificaciones" : "tramites"]: opciones }],
@@ -177,9 +193,7 @@ function registrarSolicitudes(app, prisma, autenticar, directorio) {
 
   router.put("/:id/documentos/:plantilla", express.raw({ type: "application/pdf", limit: "10mb" }), async (req, res) => {
     const pdf = req.body;
-    if (!Buffer.isBuffer(pdf) ||
-        !/^%PDF-\d\.\d(?:\r|\n)/.test(pdf.subarray(0, 12).toString("ascii")) ||
-        !/%%EOF\s*$/.test(pdf.subarray(-1024).toString("ascii"))) {
+    if (!pdfValido(pdf)) {
       return res.status(415).json({ error: "Adjunta un archivo PDF válido de hasta 10 MB" });
     }
     const solicitud = await encontrar(prisma, req);
@@ -255,6 +269,24 @@ function registrarSolicitudes(app, prisma, autenticar, directorio) {
     return resultado.error ? res.status(resultado.status).json({ error: resultado.error }) : res.json(resultado.solicitud);
   });
 
+  router.post("/:id/desistir", async (req, res) => {
+    const motivo = typeof req.body?.motivo === "string" ? req.body.motivo.trim() : "";
+    if (!motivo || motivo.length > 1500) return res.status(400).json({ error: "Registra el motivo del desistimiento." });
+    const resultado = await prisma.$transaction(async (db) => {
+      const solicitud = await encontrar(db, req);
+      if (!solicitud) return { status: 404, error: "Solicitud no encontrada" };
+      if (!["borrador", "presentado", "en_revision", "observado", "validado", "pendiente_aprobacion"].includes(solicitud.estado)) {
+        return { status: 409, error: "El expediente no admite desistimiento en esta etapa." };
+      }
+      const cambio = await db.solicitud.updateMany({ where: { ...propiedad(req), estado: solicitud.estado }, data: { estado: "desistido" } });
+      if (!cambio.count) return { status: 409, error: "El expediente cambió de estado." };
+      await db.historialEstado.create({ data: { solicitudId: solicitud.id, estadoAntes: solicitud.estado, estadoDespues: "desistido", motivo } });
+      await db.auditoria.create({ data: { usuarioId: req.usuario.id, accion: "desistir", entidad: "solicitud", entidadId: solicitud.id } });
+      return { solicitud: await encontrar(db, req) };
+    });
+    return resultado.error ? res.status(resultado.status).json({ error: resultado.error }) : res.json(resultado.solicitud);
+  });
+
   router.get("/:id/documentos/:documento", async (req, res) => {
     if (!/^[1-9]\d{0,8}$/.test(req.params.documento)) return res.status(404).json({ error: "Documento no encontrado" });
     const documento = await prisma.documentoSolicitud.findFirst({
@@ -270,4 +302,4 @@ function registrarSolicitudes(app, prisma, autenticar, directorio) {
   });
 }
 
-module.exports = { detalle, registrarSolicitudes, tiposGrado, tipoPorPrograma };
+module.exports = { detalle, registrarSolicitudes, tiposGrado, tipoPorPrograma, configuracionHabilitada, pdfValido };

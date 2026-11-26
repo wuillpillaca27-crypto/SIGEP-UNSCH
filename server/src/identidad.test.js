@@ -138,12 +138,14 @@ describe("Identidad y sesión", () => {
   });
 
   test("rechaza sesiones ausentes, inválidas, vencidas, revocadas y de cuenta inactiva", async () => {
-    expect((await ctx.pedir("/auth/perfil")).status).toBe(401);
+    expect(await ctx.pedir("/auth/perfil")).toMatchObject({ status: 401, body: { codigo: "SESION_AUSENTE" } });
     expect((await ctx.pedir("/auth/perfil", { cookie: "sigep_sesion=not-a-jwt" })).status).toBe(401);
     const vencida = jwt.sign({ iat: Math.floor(Date.now() / 1000) - 7200 }, secreto, {
       algorithm: "HS256", issuer: "sigep", audience: "sigep-web", subject: "1", jwtid: "sesion-vencida", expiresIn: "1h",
     });
-    expect((await ctx.pedir("/auth/perfil", { cookie: `sigep_sesion=${vencida}` })).status).toBe(401);
+    expect(await ctx.pedir("/auth/perfil", { cookie: `sigep_sesion=${vencida}` })).toMatchObject({
+      status: 401, body: { codigo: "SESION_EXPIRADA" },
+    });
     const deInactiva = jwt.sign({}, secreto, {
       algorithm: "HS256", issuer: "sigep", audience: "sigep-web", subject: "2", jwtid: "sesion-inactiva", expiresIn: "1h",
     });

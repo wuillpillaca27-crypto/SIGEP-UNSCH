@@ -1,4 +1,5 @@
 const { tiposGrado } = require("./solicitudes");
+const { facultadesDemostracion, programasVisibles } = require("./datos-demostracion");
 
 const formatoCodigo = /^[A-Z0-9]+(?:-[A-Z0-9]+)*$/;
 
@@ -16,13 +17,14 @@ function registrarVerificacion(app, prisma, { demostracion = false } = {}) {
       where: {
         codigo: { in: [...new Set([req.params.codigo.trim(), codigo, codigoExpediente])] },
         estado: "emitido",
+        programa: programasVisibles(),
         tipoTramite: tipo ?? { in: tiposGrado },
       },
       take: 2,
       select: {
         codigo: true,
         tipoTramite: true,
-        programa: { select: { nombre: true } },
+        programa: { select: { nombre: true, facultad: true } },
         historial: { where: { estadoDespues: "emitido" }, orderBy: [{ creadoEn: "desc" }, { id: "desc" }], take: 1, select: { creadoEn: true } },
       },
     });
@@ -35,7 +37,7 @@ function registrarVerificacion(app, prisma, { demostracion = false } = {}) {
       tipoTramite: documento.tipoTramite,
       programa: documento.programa.nombre,
       emitidoEn: documento.historial[0]?.creadoEn ?? null,
-      demostracion: demostracion || documento.codigo.startsWith("SIGEP-DEMO-"),
+      demostracion: demostracion || documento.codigo.startsWith("SIGEP-DEMO-") || facultadesDemostracion.includes(documento.programa.facultad),
     });
   });
 }

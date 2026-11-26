@@ -16,17 +16,20 @@ import { esCertificacion } from "../tramites";
 import styles from "../orientacion.module.css";
 import visual from "./asistente.module.css";
 
-const pasos = ["Datos personales y programa", "Requisitos académicos", "Documentos", "Confirmación"];
+const pasos = ["Datos personales", "Programa académico", "Requisitos académicos", "Documentos", "Confirmación"];
 const navegarAlLogin = (destino: string) => window.location.replace(destino);
 
-function destinoLogin() {
-  return `/login?continuar=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+function destinoLogin(codigo?: string) {
+  const destino = `/login?continuar=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+  return codigo === "SESION_EXPIRADA" ? destino + "&sesion=expirada" : destino;
 }
 
 const motivos: Record<NonNullable<OpcionesSolicitud["motivo"]>, (programa: string) => string> = {
   sin_matricula: () => "Tu cuenta no tiene una matrícula de estudiante vinculada. Solicita a la Escuela de Posgrado que revise tu registro.",
   programa_inactivo: (programa) => `El programa ${programa} está registrado como inactivo. La Escuela de Posgrado debe confirmar su vigencia antes de habilitar solicitudes.`,
   sin_requisitos_activos: (programa) => `${programa} no tiene requisitos activos publicados para su trámite. Solicita a la Escuela de Posgrado que verifique el catálogo autorizado.`,
+  tramite_deshabilitado: (programa) => `El trámite de ${programa} está deshabilitado. Consulta con la Escuela de Posgrado.`,
+  plantilla_no_publicada: (programa) => `Los requisitos de ${programa} están configurados, pero la plantilla todavía no está publicada.`,
 };
 
 export default function Asistente({ seleccion, certificaciones = false, navegar = navegarAlLogin }: {
@@ -39,6 +42,7 @@ export default function Asistente({ seleccion, certificaciones = false, navegar 
   const [solicitud, setSolicitud] = useState<Solicitud>();
   const [paso, setPaso] = useState(0);
   const [cargando, setCargando] = useState(true);
+  const [intento, setIntento] = useState(0);
   const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState("");
   const [mensaje, setMensaje] = useState("");
@@ -55,7 +59,7 @@ export default function Asistente({ seleccion, certificaciones = false, navegar 
       if (!vigente) return;
       if (!sesion.datos) {
         if (sesion.estadoHttp === 401) {
-          navegar(destinoLogin());
+          navegar(destinoLogin(sesion.codigo));
         } else setError(sesion.error ?? "No se pudo verificar tu sesión. Intenta nuevamente.");
         setCargando(false);
         return;
@@ -71,7 +75,7 @@ export default function Asistente({ seleccion, certificaciones = false, navegar 
       if (!vigente) return;
       if (!elegibilidad.datos) {
         if (elegibilidad.estadoHttp === 401) {
-          navegar(destinoLogin());
+          navegar(destinoLogin(elegibilidad.codigo));
         } else setError(elegibilidad.error ?? "No se pudo consultar la disponibilidad del trámite.");
         setCargando(false);
         return;
@@ -87,7 +91,7 @@ export default function Asistente({ seleccion, certificaciones = false, navegar 
     }
     void cargar();
     return () => { vigente = false; };
-  }, [navegar, seleccion, certificaciones]);
+  }, [navegar, seleccion, certificaciones, intento]);
 
   const documentosPendientes = useMemo(() => {
     if (!solicitud) return [];
@@ -97,9 +101,9 @@ export default function Asistente({ seleccion, certificaciones = false, navegar 
     );
   }, [solicitud]);
 
-  function redirigirSiVence(estadoHttp?: number) {
+  function redirigirSiVence(estadoHttp?: number, codigo?: string) {
     if (estadoHttp !== 401) return false;
-    navegar(destinoLogin());
+    navegar(destinoLogin(codigo));
     return true;
   }
 
@@ -107,7 +111,7 @@ export default function Asistente({ seleccion, certificaciones = false, navegar 
     if (!programa || !tramite) throw new Error("Selecciona un programa y un trámite habilitados.");
     const respuesta = await solicitudes.crear(tramite.tipoTramite, programa.id);
     if (!respuesta.datos) {
-      if (redirigirSiVence(respuesta.estadoHttp)) return null;
+      if (redirigirSiVence(respuesta.estadoHttp, respuesta.codigo)) return null;
       throw new Error(respuesta.error ?? "No se pudo guardar el borrador.");
     }
     setSolicitud(respuesta.datos);
@@ -120,7 +124,7 @@ export default function Asistente({ seleccion, certificaciones = false, navegar 
     setMensaje("");
     try { await accion(); }
     catch (problema) {
-      if (problema instanceof ErrorDocumento && redirigirSiVence(problema.estadoHttp)) return;
+      if (problema instanceof ErrorDocumento && redirigirSiVence(problema.estadoHttp, problema.codigo)) return;
       setError(problema instanceof Error ? problema.message : "No se pudo completar la operación.");
     }
     finally { setOcupado(false); }
@@ -129,7 +133,7 @@ export default function Asistente({ seleccion, certificaciones = false, navegar 
   async function guardarBorrador(avanzar = false) {
     const borrador = await asegurarBorrador();
     if (!borrador) return;
-    if (avanzar) setPaso(1);
+    if (avanzar) setPaso(2);
     else setMensaje("Borrador guardado. Puedes retomarlo desde Mis Trámites.");
   }
 
@@ -142,6 +146,13 @@ export default function Asistente({ seleccion, certificaciones = false, navegar 
     <section className={styles.panel} aria-busy={ocupado}>
       <h2>Asistente de solicitud</h2>
       {error && <p role="alert">{error}</p>}
+      {error && !opciones && (!perfil || perfil.rol === "estudiante") && (
+        <button type="button" onClick={() => {
+          setError("");
+          setCargando(true);
+          setIntento((previo) => previo + 1);
+        }}>Reintentar conexión</button>
+      )}
       {mensaje && <p role="status">{mensaje}</p>}
       {opciones?.motivo && (
         <div className={visual.aviso} role="status">
@@ -173,13 +184,15 @@ export default function Asistente({ seleccion, certificaciones = false, navegar 
           </ol>
           <h3>{pasos[paso]}</h3>
           {paso === 0 && (
-            <div className={`${styles.formulario} ${visual.seleccion}`}>
               <dl className={styles.datos}>
                 <div><dt>Código universitario</dt><dd>{perfil.estudiante?.codigoUniv}</dd></div>
                 <div><dt>Nombres y apellidos</dt><dd>{perfil.nombres} {perfil.apellidos}</dd></div>
                 <div><dt>DNI</dt><dd>{perfil.dni}</dd></div>
                 <div><dt>Correo electrónico</dt><dd>{perfil.email}</dd></div>
               </dl>
+          )}
+          {paso === 1 && (
+            <div className={`${styles.formulario} ${visual.seleccion}`}>
               <label>Programa académico
                 <select value={programaId} onChange={(evento) => {
                   setProgramaId(evento.target.value);
@@ -201,7 +214,7 @@ export default function Asistente({ seleccion, certificaciones = false, navegar 
               </div>
             </div>
           )}
-          {paso === 1 && (
+          {paso === 2 && (
             <>
               <p>Revisa los requisitos vigentes para {programa?.nombre} · {tramite.nombre}.</p>
               <ul className={styles.lista}>{solicitud?.validaciones.map(({ id, plantilla, estado, observacion }) => (
@@ -209,7 +222,7 @@ export default function Asistente({ seleccion, certificaciones = false, navegar 
               ))}</ul>
             </>
           )}
-          {paso === 2 && solicitud && (
+          {paso === 3 && solicitud && (
             <div className={styles.formulario}>
               <p>Adjunta los PDF solicitados. El servidor valida tipo, tamaño y pertenencia al expediente.</p>
               {solicitud.validaciones.filter(({ plantilla }) => plantilla.tipo === "documental").map(({ plantilla }) => {
@@ -228,7 +241,7 @@ export default function Asistente({ seleccion, certificaciones = false, navegar 
               {!solicitud.validaciones.some(({ plantilla }) => plantilla.tipo === "documental") && <p>No hay documentos publicados para este trámite.</p>}
             </div>
           )}
-          {paso === 3 && solicitud && (
+          {paso === 4 && solicitud && (
             <>
               <h4>Confirma tu solicitud</h4>
               <dl className={styles.datos}>
@@ -242,7 +255,7 @@ export default function Asistente({ seleccion, certificaciones = false, navegar 
               <button type="button" disabled={ocupado || documentosPendientes.length > 0} onClick={() => void ejecutar(async () => {
                 const respuesta = await solicitudes.presentar(solicitud.id);
                 if (!respuesta.datos) {
-                  if (redirigirSiVence(respuesta.estadoHttp)) return;
+                  if (redirigirSiVence(respuesta.estadoHttp, respuesta.codigo)) return;
                   throw new Error(respuesta.error ?? "No se pudo presentar la solicitud.");
                 }
                 setSolicitud(respuesta.datos);
@@ -251,8 +264,8 @@ export default function Asistente({ seleccion, certificaciones = false, navegar 
           )}
           <div className={styles.controles}>
             {paso > 0 && <button type="button" disabled={ocupado} onClick={() => setPaso(paso - 1)}>Anterior</button>}
-            {paso > 0 && paso < 3 && <button type="button" disabled={ocupado} onClick={() => setPaso(paso + 1)}>Siguiente</button>}
-            {paso > 0 && <button type="button" disabled={ocupado} onClick={() => void ejecutar(() => guardarBorrador())}>Guardar borrador</button>}
+            {paso !== 1 && paso < 4 && <button type="button" disabled={ocupado} onClick={() => setPaso(paso + 1)}>Siguiente</button>}
+            {paso > 1 && <button type="button" disabled={ocupado} onClick={() => void ejecutar(() => guardarBorrador())}>Guardar borrador</button>}
           </div>
         </>
       )}

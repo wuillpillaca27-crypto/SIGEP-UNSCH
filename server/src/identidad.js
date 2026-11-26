@@ -2,14 +2,15 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { randomUUID } = require("node:crypto");
 const { registrarGoogle } = require("./identidad-google");
+const { permiteDemostracion } = require("./datos-demostracion");
 
 const perfil = {
-  id: true, nombres: true, apellidos: true, dni: true, email: true, rol: true,
+  id: true, nombres: true, apellidos: true, dni: true, email: true, rol: true, puedeAprobar: true,
   estudiante: { select: { id: true, codigoUniv: true, programa: { select: { id: true, nombre: true, tipo: true, activo: true } } } },
 };
 
 const nombreCookie = "sigep_sesion";
-const opcionesCookie = { httpOnly: true, sameSite: "lax", secure: process.env.SIGEP_DEMOSTRACION !== "1", path: "/" };
+const opcionesCookie = { httpOnly: true, sameSite: "lax", secure: !permiteDemostracion(), path: "/" };
 const hashAlternativo = bcrypt.hashSync("sigep-comparacion-reservada", 12);
 
 function leerCookie(req, nombre) {
@@ -31,16 +32,20 @@ function registrarIdentidad(app, prisma, secreto) {
   async function autenticar(req, res, next) {
     res.set("Cache-Control", "no-store");
     if (!secreto) return res.status(503).json({ error: "El ingreso con cuentas SIGEP aún no está habilitado" });
+    if (!leerCookie(req, nombreCookie)) return res.status(401).json({ codigo: "SESION_AUSENTE", error: "Inicia sesión para continuar" });
     let id;
     try {
       const sesion = verificarSesion(req);
       id = Number(sesion.sub);
       if (!Number.isSafeInteger(id) || revocadas.has(sesion.jti)) throw new Error("Sesión inválida");
-    } catch {
-      return res.status(401).json({ error: "Inicia sesión nuevamente" });
+    } catch (error) {
+      if (error.name === "TokenExpiredError") {
+        return res.status(401).json({ codigo: "SESION_EXPIRADA", error: "Tu sesión expiró. Inicia sesión nuevamente" });
+      }
+      return res.status(401).json({ codigo: "SESION_INVALIDA", error: "Inicia sesión nuevamente" });
     }
     const usuario = await prisma.usuario.findFirst({ where: { id, activo: true }, select: perfil });
-    if (!usuario) return res.status(401).json({ error: "Inicia sesión nuevamente" });
+    if (!usuario) return res.status(401).json({ codigo: "SESION_INVALIDA", error: "Inicia sesión nuevamente" });
     req.usuario = usuario;
     return next();
   }
