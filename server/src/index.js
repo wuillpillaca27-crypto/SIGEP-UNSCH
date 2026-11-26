@@ -19,7 +19,8 @@ if (!url?.startsWith("postgresql://")) {
   throw new Error("DATABASE_URL debe usar el esquema postgresql://.");
 }
 
-const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: url }) });
+const schema = new URL(url).searchParams.get("schema") ?? undefined;
+const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: url }, { schema }) });
 const app = express();
 const origenes = (process.env.CLIENT_ORIGINS ?? "http://localhost:3000,http://127.0.0.1:3000").split(",").map((valor) => valor.trim());
 
