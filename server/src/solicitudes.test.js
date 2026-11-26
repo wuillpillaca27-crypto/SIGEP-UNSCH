@@ -116,6 +116,88 @@ describe("Solicitudes, revisión e identidad", () => {
   beforeEach(async () => { await ctx.restablecer(); });
   afterAll(async () => { await ctx.cerrar(); });
 
+  test("las opciones de certificación exigen sesión y rol estudiante", async () => {
+    await ctx.pedir("/solicitudes/opciones-certificacion", 401);
+    const operador = await ctx.ingresar(3);
+    await ctx.pedir("/solicitudes/opciones-certificacion", 403, { token: operador });
+  });
+
+  test("explica la elegibilidad y solo muestra la matrícula propia", async () => {
+    const token = await ctx.ingresar(1);
+    const noCertificable = await ctx.pedir("/solicitudes/opciones-certificacion", 200, { token });
+    expect(noCertificable).toMatchObject({ programas: [], motivo: "tipo_no_certificable" });
+
+    await ctx.prisma.programa.update({ where: { id: 1 }, data: { tipo: "diplomado" } });
+    const sinRequisitos = await ctx.pedir("/solicitudes/opciones-certificacion", 200, { token });
+    expect(sinRequisitos).toMatchObject({ programas: [], motivo: "sin_requisitos_activos" });
+
+    await ctx.prisma.plantillaRequisito.create({ data: {
+      programaId: 1, tipoTramite: "certificado_diplomado", codigo: "CERT-TEST-1",
+      nombre: "PDF de prueba", descripcion: "Solo fixture de integración.", tipo: "documental",
+    } });
+    const elegibles = await ctx.pedir("/solicitudes/opciones-certificacion", 200, { token });
+    expect(elegibles.programas).toHaveLength(1);
+    expect(elegibles.programas[0]).toMatchObject({ id: 1, tipo: "diplomado" });
+    expect(elegibles.programas[0].certificaciones).toMatchObject([
+      { clave: "diplomados", tipoTramite: "certificado_diplomado", requisitos: [{ nombre: "PDF de prueba" }] },
+    ]);
+
+    await ctx.prisma.programa.create({ data: { id: 2, nombre: "Diplomado ajeno de prueba", tipo: "diplomado", facultad: "Fixture" } });
+    await ctx.prisma.plantillaRequisito.create({ data: {
+      programaId: 2, tipoTramite: "certificado_diplomado", codigo: "CERT-TEST-2",
+      nombre: "PDF ajeno", descripcion: "No debe exponerse.", tipo: "documental",
+    } });
+    const acotadas = await ctx.pedir("/solicitudes/opciones-certificacion", 200, { token });
+    expect(acotadas.programas.map(({ id }) => id)).toEqual([1]);
+  });
+
+  test("distingue ausencia de matrícula y programa inactivo", async () => {
+    const token = await ctx.ingresar(2);
+    await ctx.prisma.estudiante.delete({ where: { usuarioId: 2 } });
+    const sinMatricula = await ctx.pedir("/solicitudes/opciones-certificacion", 200, { token });
+    expect(sinMatricula).toMatchObject({ programas: [], motivo: "sin_matricula" });
+
+    await ctx.prisma.estudiante.create({ data: { usuarioId: 2, codigoUniv: "TEST2", programaId: 1 } });
+    await ctx.prisma.programa.update({ where: { id: 1 }, data: { activo: false } });
+    const inactivo = await ctx.pedir("/solicitudes/opciones-certificacion", 200, { token });
+    expect(inactivo).toMatchObject({ programas: [], motivo: "programa_inactivo" });
+  });
+
+  test("la creación de certificación comprueba el programa seleccionado", async () => {
+    const token = await ctx.ingresar(1);
+    await ctx.prisma.programa.update({ where: { id: 1 }, data: { tipo: "diplomado" } });
+    await ctx.prisma.plantillaRequisito.create({ data: {
+      programaId: 1, tipoTramite: "certificado_diplomado", codigo: "CERT-CREATE-TEST",
+      nombre: "PDF de prueba", descripcion: "Solo fixture de integración.", tipo: "documental",
+    } });
+    await ctx.prisma.programa.create({ data: { id: 2, nombre: "Programa ajeno de prueba", tipo: "diplomado", facultad: "Fixture" } });
+    await ctx.pedir("/solicitudes", 422, { token, metodo: "POST", datos: { programaId: 2, tipoTramite: "certificado_diplomado" } });
+    await ctx.pedir("/solicitudes", 422, { token, metodo: "POST", datos: { programaId: "1", tipoTramite: "certificado_diplomado" } });
+    const solicitud = await ctx.pedir("/solicitudes", 200, { token, metodo: "POST", datos: { programaId: 1, tipoTramite: "certificado_diplomado" } });
+    expect(solicitud).toMatchObject({ programa: { nombre: "Doctorado de prueba" }, tipoTramite: "certificado_diplomado", estado: "borrador" });
+    expect(solicitud.validaciones).toHaveLength(1);
+    expect(solicitud.historial).toHaveLength(1);
+    const datos = { programaId: 1, tipoTramite: "certificado_diplomado" };
+    const borrador = await ctx.pedir("/solicitudes", 200, { token, metodo: "POST", datos });
+    expect(borrador.id).toBe(solicitud.id);
+    const plantillaId = solicitud.validaciones[0].plantilla.id;
+    const archivo = `/solicitudes/${solicitud.id}/documentos/${plantillaId}`;
+    const presentar = `/solicitudes/${solicitud.id}/presentar`;
+    await ctx.prisma.plantillaRequisito.update({ where: { id: plantillaId }, data: { activo: false } });
+    await ctx.pedir("/solicitudes", 409, { token, metodo: "POST", datos });
+    await ctx.pedir(archivo, 409, { token, metodo: "PUT", pdf });
+    await ctx.pedir(presentar, 409, { token, metodo: "POST" });
+    await ctx.prisma.plantillaRequisito.update({ where: { id: plantillaId }, data: { activo: true } });
+    await ctx.pedir(presentar, 422, { token, metodo: "POST" });
+    const adjunta = await ctx.pedir(archivo, 200, { token, metodo: "PUT", pdf });
+    expect(adjunta.documentos).toHaveLength(1);
+    const presentada = await ctx.pedir(presentar, 200, { token, metodo: "POST" });
+    expect(presentada).toMatchObject({ id: solicitud.id, codigo: solicitud.codigo, tipoTramite: "certificado_diplomado", estado: "presentado" });
+    expect(presentada.historial.map(({ estadoDespues }) => estadoDespues)).toEqual(["borrador", "presentado"]);
+    const propias = await ctx.pedir("/solicitudes", 200, { token });
+    expect(propias.map(({ id }) => id)).toEqual([solicitud.id]);
+  });
+
   test("S-01 a S-10: sesión, permisos y perfil", async () => {
     const token = await ctx.ingresar(1);
     const operador = await ctx.ingresar(3);

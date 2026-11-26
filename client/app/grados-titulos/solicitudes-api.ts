@@ -18,15 +18,30 @@ export type Solicitud = {
   }[];
   historial: { id: number; estadoDespues: string; creadoEn: string; motivo: string | null }[];
 };
+export type OpcionesCertificacion = {
+  programas: {
+    id: number; nombre: string; tipo: string; activo: boolean;
+    certificaciones: {
+      clave: string; nombre: string; tipoTramite: string;
+      requisitos: { id: number; nombre: string; descripcion: string; tipo: string; obligatorio: boolean; versionNorm: string }[];
+    }[];
+  }[];
+  programaRegistrado: { id: number; nombre: string; tipo: string; activo: boolean } | null;
+  motivo: "sin_matricula" | "programa_inactivo" | "tipo_no_certificable" | "sin_requisitos_activos" | null;
+};
 
 export const solicitudes = {
   ingresar: (identificador: string, password: string) => api.post<{ usuario: Perfil }>("/auth/login", {
     ...(/^\d{8}$/.test(identificador) ? { dni: identificador } : { email: identificador }), password,
   }),
   perfil: () => api.get<Perfil>("/auth/perfil"),
+  opcionesCertificacion: () => api.get<OpcionesCertificacion>("/solicitudes/opciones-certificacion"),
   cerrarSesion: () => api.post<{ ok: boolean }>("/auth/logout", {}),
   listar: () => api.get<Solicitud[]>("/solicitudes"),
-  crear: (tipoTramite: string) => api.post<Solicitud>("/solicitudes", { tipoTramite }),
+  crear: (tipoTramite: string, programaId?: number) => api.post<Solicitud>("/solicitudes", {
+    tipoTramite,
+    ...(programaId !== undefined ? { programaId } : {}),
+  }),
   presentar: (id: number) => api.post<Solicitud>(`/solicitudes/${id}/presentar`, {}),
   subsanar: (id: number) => api.post<Solicitud>(`/solicitudes/${id}/subsanar`, {}),
 };
@@ -38,12 +53,21 @@ function archivo(id: number, idArchivo: number, opciones?: RequestInit) {
   });
 }
 
+export class ErrorDocumento extends Error {
+  constructor(mensaje: string, readonly estadoHttp: number) {
+    super(mensaje);
+  }
+}
+
 export async function cargarDocumento(id: number, requisito: number, pdf: File): Promise<Solicitud> {
   if (pdf.type !== "application/pdf" || pdf.size > 10 * 1024 * 1024) {
     throw new Error("Selecciona un PDF de hasta 10 MB.");
   }
   const respuesta = await archivo(id, requisito, { method: "PUT", headers: { "Content-Type": "application/pdf" }, body: pdf });
-  if (!respuesta.ok) throw new Error((await respuesta.json()).error ?? "No se pudo cargar el archivo.");
+  if (!respuesta.ok) {
+    const datos = await respuesta.json().catch(() => null);
+    throw new ErrorDocumento(datos?.error ?? "No se pudo cargar el archivo.", respuesta.status);
+  }
   return respuesta.json();
 }
 
@@ -51,7 +75,7 @@ export async function descargarDocumento(id: number, documento: number, revision
   const respuesta = revision
     ? await fetch(`${API_URL}/revision-grados/${id}/documentos/${documento}`, { credentials: "same-origin" })
     : await archivo(id, documento);
-  if (!respuesta.ok) throw new Error("No se pudo abrir el documento.");
+  if (!respuesta.ok) throw new ErrorDocumento("No se pudo abrir el documento.", respuesta.status);
   const url = URL.createObjectURL(await respuesta.blob());
   const enlace = document.createElement("a");
   enlace.href = url;

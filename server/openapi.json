@@ -119,6 +119,19 @@
         }
       }
     },
+    "/api/solicitudes/opciones-certificacion": {
+      "get": {
+        "tags": ["Solicitudes"],
+        "summary": "Consultar certificaciones habilitadas para la matrícula autenticada",
+        "security": [{ "cookieAuth": [] }],
+        "responses": {
+          "200": { "description": "Programa matriculado, certificaciones con requisitos activos o motivo concreto de indisponibilidad.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OpcionesCertificacion" } } } },
+          "401": { "$ref": "#/components/responses/NoAutorizado" },
+          "403": { "$ref": "#/components/responses/Prohibido" },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
     "/api/solicitudes": {
       "get": {
         "tags": ["Solicitudes"],
@@ -405,7 +418,24 @@
       "NuevaSolicitud": {
         "type": "object",
         "required": ["tipoTramite"],
-        "properties": { "tipoTramite": { "type": "string", "enum": ["grado_maestro", "grado_doctor", "titulo_segunda_especialidad", "certificado_diplomado", "certificacion_modulos"] } }
+        "properties": {
+          "tipoTramite": { "type": "string", "enum": ["grado_maestro", "grado_doctor", "titulo_segunda_especialidad", "certificado_diplomado", "certificacion_modulos"] },
+          "programaId": { "type": "integer", "minimum": 1, "description": "Opcional; para certificaciones debe coincidir con el programa de la matrícula autenticada." }
+        }
+      },
+      "OpcionesCertificacion": {
+        "type": "object",
+        "required": ["programas", "programaRegistrado", "motivo"],
+        "properties": {
+          "programas": { "type": "array", "items": { "type": "object", "required": ["id", "nombre", "tipo", "activo", "certificaciones"], "properties": {
+            "id": { "type": "integer" }, "nombre": { "type": "string" }, "tipo": { "type": "string", "enum": ["diplomado", "certificacion_modulos"] }, "activo": { "type": "boolean" },
+            "certificaciones": { "type": "array", "items": { "type": "object", "required": ["clave", "nombre", "tipoTramite", "requisitos"], "properties": {
+              "clave": { "type": "string", "enum": ["diplomados", "modulos"] }, "nombre": { "type": "string" }, "tipoTramite": { "type": "string", "enum": ["certificado_diplomado", "certificacion_modulos"] }, "requisitos": { "type": "array", "items": { "type": "object" } }
+            } } }
+          } } },
+          "programaRegistrado": { "type": ["object", "null"] },
+          "motivo": { "type": ["string", "null"], "enum": ["sin_matricula", "programa_inactivo", "tipo_no_certificable", "sin_requisitos_activos", null] }
+        }
       },
       "NuevoPrograma": {
         "type": "object",

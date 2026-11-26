@@ -1,0 +1,74 @@
+.pasos {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .5rem;
+  margin: 1rem 0;
+  padding: 0 0 1rem;
+  border-bottom: 1px solid var(--borde);
+  list-style-type: none;
+}
+
+.pasos li {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: .45rem;
+  font-size: .875rem;
+  text-align: center;
+}
+
+.pasos span {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid #c69f55;
+  border-radius: 50%;
+  background: #faf3e4;
+  color: #651822;
+  font-weight: 700;
+}
+
+.pasos [aria-current="step"] {
+  font-weight: 700;
+}
+
+.pasos [aria-current="step"] span {
+  background: #651822;
+  color: #fff;
+}
+
+.seleccion select {
+  width: 100%;
+  min-height: 44px;
+  padding: .5rem .75rem;
+  border: 1px solid var(--borde);
+  border-radius: 6px;
+  background: var(--panel);
+  color: inherit;
+  font: inherit;
+}
+
+.aviso {
+  padding: 1rem;
+  border-inline-start: 3px solid #c69f55;
+  border-radius: 6px;
+  background: #faf3e4;
+  color: #491820;
+}
+
+.aviso h3 {
+  margin: 0;
+}
+
+.aviso a {
+  color: inherit;
+  font-weight: 700;
+}
+
+@media (max-width: 420px) {
+  .pasos {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: .75rem;
+  }
+}
