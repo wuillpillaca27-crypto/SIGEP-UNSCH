@@ -44,7 +44,7 @@ description: "Lista de tareas para publicar Swagger UI y documentar las rutas ac
 
 **Propósito**: Mantener el procedimiento de comprobación y los límites del cambio claros para quien implemente o revise.
 
-- [ ] T005 [US1] Actualizar `specs/012-swagger-api-docs/quickstart.md` si el nombre de paquete, URL efectiva o pasos de arranque difieren de la configuración implementada; conservar la comprobación del inventario FR-016 y el límite de no alterar lógica de negocio.
+- [X] T005 [US1] Actualizar `specs/012-swagger-api-docs/quickstart.md` si el nombre de paquete, URL efectiva o pasos de arranque difieren de la configuración implementada; conservar la comprobación del inventario FR-016 y el límite de no alterar lógica de negocio.
 
 ## Dependencias y orden de ejecución
 
