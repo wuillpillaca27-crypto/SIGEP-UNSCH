@@ -11,7 +11,7 @@ Crear un workflow que se ejecute en pushes y pull requests y muestre dos resulta
 **Lenguaje/versión**: Workflow YAML; Node.js 24 para los dos jobs. `server/` usa JavaScript CommonJS y `client/` usa Next.js 16, React 19 y TypeScript 5.  
 **Dependencias principales**: GitHub Actions oficiales para checkout, Node, y carga de artefactos; `server/` ya tiene Jest 30.5.2; `client/` usará Jest y `jest-environment-jsdom`, con `next/jest` para transformar TypeScript y `@types/jest` para tipos. Se conserva Testing Library, `jest-dom` y MSW existentes donde se usan.  
 **Almacenamiento**: N/A; GitHub Actions conserva los reportes `coverage/` como artefactos de la ejecución.  
-**Pruebas**: `npm test` con cobertura en ambos paquetes; Jest del servidor ya produce `server/coverage/`, y Jest del cliente producirá `client/coverage/`. No se requiere base de datos ni servicio externo.  
+**Pruebas**: `npm test` con cobertura en ambos paquetes; Jest del servidor ya produce `server/coverage/`, y Jest del cliente producirá `client/coverage/`. Antes de ejecutar las pruebas del servidor, CI genera Prisma Client con una URL SQLite temporal, sin iniciar ni migrar una base. No se requiere servicio externo.
 **Plataforma objetivo**: GitHub Actions con runner Linux hospedado por GitHub (`ubuntu-latest`).  
 **Tipo de proyecto**: Workflow de integración continua para un repositorio con dos paquetes npm independientes.  
 **Objetivo de rendimiento**: Los dos jobs pueden empezar sin esperar el resultado del otro; no se define SLA de duración.  
@@ -43,7 +43,7 @@ Las decisiones y alternativas se registran en [research.md](research.md). Los pu
 
 1. Definir jobs `server` y `client` por separado y sin dependencias para que ambos se ejecuten independientemente; no usar matrix porque el contrato exige dos jobs identificables por paquete.
 2. Ejecutar instalación y `npm test` dentro de cada paquete para usar el lockfile y los scripts propios. Node queda fijado en la major 24.
-3. Mantener Jest en `server/`. En `client/`, reemplazar la configuración Vitest por `next/jest`, entorno `jsdom`, mapa del alias `@/` y setup Jest que preserve la zona horaria y ciclo de vida MSW actuales. No modificar componentes ni servicios de producto.
+3. Mantener Jest en `server/`. En `client/`, reemplazar la configuración Vitest por `next/jest`, entorno `jsdom`, mapa del alias `@/` y setup Jest que preserve `jest-dom` y la zona horaria. La suite actual no usa handlers MSW y Jest falla al importar MSW por su dependencia ESM `rettime`, así que no se carga MSW en el setup. No modificar componentes ni servicios de producto.
 4. Subir `server/coverage/` y `client/coverage/` como artefactos separados; la subida corre tras terminar la suite aunque haya fallado, pero solo representa un artefacto si el reporte existe.
 5. Limitar permisos del workflow a lectura del contenido para checkout. No se configura ningún secreto; el token de lectura que GitHub administra internamente para checkout no se expone a los comandos de prueba.
 
@@ -75,7 +75,7 @@ client/
 ├── package.json                     # Script Jest con cobertura y dependencias de prueba
 ├── package-lock.json                # Dependencias bloqueadas
 ├── jest.config.js                   # Configuración next/jest
-├── jest.setup.ts                    # Matcher, zona horaria y MSW
+├── jest.setup.ts                    # Matcher de jest-dom
 └── app/__tests__/lib/runner.test.ts # Prueba existente adaptada a Jest
 ```
 

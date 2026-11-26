@@ -16,7 +16,7 @@
 
 ## Decisión 3: conservar Jest en server y pasar client a Jest integrado con Next.js
 
-- **Decisión**: Mantener `server/` sin cambios de runner. En `client/`, sustituir Vitest por Jest con `next/jest`, entorno `jsdom`, `moduleNameMapper` para el alias `@/` y un setup de Jest que mantenga `jest-dom`, la zona horaria Lima y el lifecycle de MSW.
+- **Decisión**: Mantener `server/` sin cambios de runner. En `client/`, sustituir Vitest por Jest con `next/jest`, entorno `jsdom`, `moduleNameMapper` para el alias `@/` y un setup de Jest que mantenga `jest-dom` y la zona horaria Lima. La suite actual no usa handlers MSW y Jest falla al importar MSW por su dependencia ESM `rettime`; por eso MSW no se carga en este setup.
 - **Rationale**: `server/package.json` ya ejecuta `jest --coverage`; la suite TypeScript del cliente hoy importa Vitest y requiere su adaptación. Next.js documenta una integración Jest que configura el transformador del framework, e indica configuración de alias y setup de `jest-dom`. Esto evita agregar un transformador TypeScript separado. La constitución del proyecto establece Jest para client y server.
 - **Alternativas consideradas**: Mantener Vitest en client (contradice el requisito de pruebas Jest en ambos); usar `ts-jest` (funciona con TypeScript, pero añade un transformador redundante frente a `next/jest`).
 - **Fuentes**: [Guía oficial de Next.js para Jest](https://nextjs.org/docs/app/guides/testing/jest), [configuración de cobertura de Jest](https://jestjs.io/docs/configuration).

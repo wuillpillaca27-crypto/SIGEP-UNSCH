@@ -24,7 +24,7 @@ description: "Tareas para un workflow CI independiente por paquete con Jest y ar
 **Propósito**: Preparar el entorno Jest de Next.js antes de migrar la suite y conectarla a CI.
 
 - [X] T002 [P] Crear `client/jest.config.js` con la integración `next/jest`, entorno `jsdom`, resolución del alias `@/` desde `client/`, cobertura en `coverage/`, carga de `client/jest.setup.ts` y asignación de `process.env.TZ = "America/Lima"` trasladada desde `client/vitest.config.ts`; retirar `client/vitest.config.ts`.
-- [X] T003 [P] Crear `client/jest.setup.ts` a partir de `client/vitest.setup.ts`, usar `@testing-library/jest-dom` y los hooks globales de Jest, preservar el ciclo `beforeAll`/`afterEach`/`afterAll` de MSW y retirar `client/vitest.setup.ts`.
+- [X] T003 [P] Crear `client/jest.setup.ts` con `@testing-library/jest-dom` y retirar `client/vitest.setup.ts`. La suite actual no usa handlers MSW y la importación de MSW en Jest falla por su dependencia ESM `rettime`; no se carga MSW en el setup mientras no haya pruebas que lo requieran.
 
 **Checkpoint**: `client/` ya dispone de configuración y setup Jest compatibles con Next.js; aún falta adaptar la suite existente y crear el workflow.
 
@@ -37,7 +37,7 @@ description: "Tareas para un workflow CI independiente por paquete con Jest y ar
 **Criterio de prueba independiente**: Ejecutar el script `npm test` desde `server/` y `client/`; ambos deben ejecutar Jest y generar `coverage/`. En un push o pull request, comprobar que aparecen los jobs independientes `server` y `client`, usan Node 24, y ofrecen los artefactos `server-coverage` y `client-coverage` cuando hay reportes generados. Si Jest falla después de producir cobertura, el job conserva el fallo y sube el reporte disponible.
 
 - [X] T004 [US1] Adaptar `client/app/__tests__/lib/runner.test.ts` a Jest quitando la importación de Vitest y conservando las aserciones sobre el alias `@/`, `POR_PAGINA` y `America/Lima`.
-- [X] T005 [P] [US1] Crear `.github/workflows/ci.yml` para `push` y `pull_request` con exactamente dos jobs independientes (`server` y `client`) sin `needs` ni matriz; en cada job configurar Node 24, ejecutar `npm ci` y `npm test` desde el paquete correspondiente y subir `server/coverage/` o `client/coverage/` con nombres `server-coverage` y `client-coverage`, usando `if: ${{ !cancelled() }}` e `if-no-files-found: warn` para conservar reportes tras fallos sin crear artefactos vacíos; limitar permisos a `contents: read`, no referenciar `secrets` y no incluir despliegue ni publicación.
+- [X] T005 [P] [US1] Crear `.github/workflows/ci.yml` para `push` y `pull_request` con exactamente dos jobs independientes (`server` y `client`) sin `needs` ni matriz; en cada job configurar Node 24, ejecutar `npm ci` y `npm test` desde el paquete correspondiente y subir `server/coverage/` o `client/coverage/` con nombres `server-coverage` y `client-coverage`, usando `if: ${{ !cancelled() }}` e `if-no-files-found: warn` para conservar reportes tras fallos sin crear artefactos vacíos. El server genera Prisma Client con una URL SQLite temporal antes de probar; limitar permisos a `contents: read`, no referenciar `secrets` y no incluir despliegue ni publicación.
 
 **Checkpoint**: La historia está implementada: el runner de cliente es Jest y el workflow reporta por separado pruebas y cobertura por paquete.
 
@@ -47,7 +47,7 @@ description: "Tareas para un workflow CI independiente por paquete con Jest y ar
 
 **Propósito**: Verificar que la entrega satisface el contrato y la guía de ejecución.
 
-- [ ] T006 Ejecutar los pasos locales de `specs/014-ci-github-actions/quickstart.md` desde `server/` y `client/`; confirmar que cada paquete ejecuta Jest y genera su reporte en `coverage/`, y revisar `.github/workflows/ci.yml` contra los dos jobs, Node 24, los dos nombres/rutas de artefactos, permisos mínimos, ausencia de referencias a secretos y ausencia de despliegue.
+- [X] T006 Ejecutar los pasos locales de `specs/014-ci-github-actions/quickstart.md` desde `server/` y `client/`; confirmar que cada paquete ejecuta Jest y genera su reporte en `coverage/`, y revisar `.github/workflows/ci.yml` contra los dos jobs, Node 24, los dos nombres/rutas de artefactos, permisos mínimos, ausencia de referencias a secretos y ausencia de despliegue.
 
 ## Dependencias y orden de ejecución
 
