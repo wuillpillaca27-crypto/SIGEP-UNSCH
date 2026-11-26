@@ -13,7 +13,7 @@ description: "Lista de tareas para publicar Swagger UI y documentar las rutas ac
 
 **Propósito**: Instalar el componente de presentación Swagger UI en el servidor existente.
 
-- [ ] T001 [P] Añadir una versión compatible de `swagger-ui-express` como dependencia de producción y actualizar el lockfile desde `server/` en `server/package.json` y `server/package-lock.json`.
+- [X] T001 [P] Añadir una versión compatible de `swagger-ui-express` como dependencia de producción y actualizar el lockfile desde `server/` en `server/package.json` y `server/package-lock.json`.
 
 ---
 
