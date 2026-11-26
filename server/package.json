@@ -8,6 +8,7 @@
     "local": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File iniciar-local.ps1",
     "db:init": "node scripts/inicializar-base.js",
     "db:generate": "prisma generate",
+    "db:seed:load": "node scripts/sembrar-carga.js",
     "test": "jest --coverage"
   },
   "keywords": [],

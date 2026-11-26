@@ -43,10 +43,10 @@
 
 **Independent Test**: Inicializar una base PostgreSQL vacía, iniciar el servidor con `DATABASE_URL` válida, confirmar una lectura/escritura existente y comprobar que una URL ausente o no PostgreSQL falla antes de servir tráfico. Ejecutar la siembra de carga y confirmar 20.000 cuentas y operaciones CRUD.
 
-- [ ] T008 [US1] Añadir pruebas de arranque para URL PostgreSQL válida y rechazo previo de URL ausente o no PostgreSQL en `server/src/index.test.js`.
-- [ ] T009 [P] [US1] Crear el script independiente de siembra y verificación CRUD de 20.000 cuentas en `server/scripts/sembrar-carga.js`, con identificadores sintéticos únicos y salida sin credenciales.
-- [ ] T010 [US1] Añadir el comando de siembra de carga y sus parámetros en `server/package.json`.
-- [ ] T011 [P] [US1] Añadir un servicio PostgreSQL 18.7 con health check y puerto de desarrollo para pruebas locales en `server/docker-compose.test.yml`.
+- [X] T008 [US1] Añadir pruebas de arranque para URL PostgreSQL válida y rechazo previo de URL ausente o no PostgreSQL en `server/src/index.test.js`.
+- [X] T009 [P] [US1] Crear el script independiente de siembra y verificación CRUD de 20.000 cuentas en `server/scripts/sembrar-carga.js`, con identificadores sintéticos únicos y salida sin credenciales.
+- [X] T010 [US1] Añadir el comando de siembra de carga y sus parámetros en `server/package.json`.
+- [X] T011 [P] [US1] Añadir un servicio PostgreSQL 18.7 con health check y puerto de desarrollo para pruebas locales en `server/docker-compose.test.yml`.
 
 **Checkpoint**: Servidor PostgreSQL y siembra de carga verificables de forma independiente.
 

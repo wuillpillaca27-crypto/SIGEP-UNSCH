@@ -20,7 +20,7 @@ docker compose -f server/docker-compose.test.yml up -d --wait
 Configurar la URL de test en la sesión de PowerShell, con la contraseña local definida en Compose:
 
 ```powershell
-$env:SIGEP_TEST_DATABASE_URL = "postgresql://sigep_test:local_test_only@localhost:5432/sigep_test"
+$env:SIGEP_TEST_DATABASE_URL = "postgresql://sigep_test:local_test_only@localhost:55432/sigep_test"
 ```
 
 La variable `DATABASE_URL` institucional no debe ser igual a esta URL. Ejecutar todas las suites:
@@ -85,10 +85,10 @@ Usar una base vacía no institucional destinada a carga, con `DATABASE_URL` apun
 ```powershell
 $env:DATABASE_URL = "postgresql://sigep_load:local_load_only@localhost:5432/sigep_load"
 npm run db:init
-npm run db:seed:load -- --count 20000
+npm run db:seed:load -- --count 20000 --rollback
 ```
 
-**Esperado**: el script informa creación de 20.000 cuentas, conteo final y verificación CRUD sin relaciones inválidas ni datos duplicados. El proceso no corre dentro de Jest ni expresa un objetivo de concurrencia.
+**Esperado**: el script informa creación de 20.000 cuentas sintéticas, conteo final y verificación CRUD sin relaciones inválidas ni datos duplicados. Con `--rollback`, valida dentro de una transacción y revierte la siembra al terminar. El proceso no corre dentro de Jest ni expresa un objetivo de concurrencia.
 
 ## CI
 
