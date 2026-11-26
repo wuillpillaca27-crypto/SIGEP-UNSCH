@@ -3,10 +3,7 @@ const { once } = require("node:events");
 const { mkdtemp, rm } = require("node:fs/promises");
 const { tmpdir } = require("node:os");
 const { join } = require("node:path");
-const { DatabaseSync } = require("node:sqlite");
-const { pathToFileURL } = require("node:url");
-const { PrismaClient } = require("@prisma/client");
-const { PrismaLibSql } = require("@prisma/adapter-libsql");
+const { crearBasePostgresSuite } = require("./test/postgres-suite");
 const express = require("express");
 const { registrarRevision } = require("./revision-grados");
 
@@ -14,34 +11,8 @@ jest.setTimeout(30000);
 
 async function crearContexto() {
   const directorio = await mkdtemp(join(tmpdir(), "sigep-revision-acciones-"));
-  const archivo = join(directorio, "acciones.sqlite");
-  const base = new DatabaseSync(archivo);
-  base.exec(`
-    CREATE TABLE usuarios (id INTEGER PRIMARY KEY, nombres TEXT, apellidos TEXT, dni TEXT, email TEXT,
-      password TEXT, rol TEXT, activo INTEGER);
-    CREATE TABLE estudiantes (id INTEGER PRIMARY KEY, usuarioId INTEGER, codigoUniv TEXT, programaId INTEGER);
-    CREATE TABLE programas (id INTEGER PRIMARY KEY, nombre TEXT, tipo TEXT, activo INTEGER);
-    CREATE TABLE plantillas_requisito (id INTEGER PRIMARY KEY, programaId INTEGER, tipoTramite TEXT,
-      nombre TEXT, descripcion TEXT, tipo TEXT, obligatorio INTEGER, orden INTEGER, activo INTEGER);
-    CREATE TABLE solicitudes (id INTEGER PRIMARY KEY, codigo TEXT UNIQUE, estudianteId INTEGER, usuarioId INTEGER,
-      programaId INTEGER, tipoTramite TEXT, estado TEXT DEFAULT 'borrador', observaciones TEXT,
-      creadoEn TEXT DEFAULT CURRENT_TIMESTAMP, actualizadoEn TEXT, presentadoEn TEXT, aprobadoEn TEXT);
-    CREATE TABLE validaciones_requisito (id INTEGER PRIMARY KEY, solicitudId INTEGER, plantillaId INTEGER,
-      estado TEXT DEFAULT 'pendiente', evidencia TEXT, observacion TEXT, validadoPor INTEGER, validadoEn TEXT,
-      creadoEn TEXT DEFAULT CURRENT_TIMESTAMP, actualizadoEn TEXT);
-    CREATE TABLE historial_estados (id INTEGER PRIMARY KEY, solicitudId INTEGER, estadoAntes TEXT,
-      estadoDespues TEXT, motivo TEXT, creadoEn TEXT DEFAULT CURRENT_TIMESTAMP);
-    CREATE TABLE documentos_solicitud (id INTEGER PRIMARY KEY, solicitudId INTEGER, nombre TEXT, tipoDoc TEXT,
-      nombreArchivo TEXT, rutaArchivo TEXT, mimeType TEXT, tamanoBytes INTEGER, subidoPor INTEGER,
-      creadoEn TEXT DEFAULT CURRENT_TIMESTAMP, reemplazadoPor INTEGER);
-    CREATE TABLE auditoria (id INTEGER PRIMARY KEY, usuarioId INTEGER, accion TEXT, entidad TEXT, entidadId INTEGER,
-      detalles TEXT, ip TEXT, creadoEn TEXT DEFAULT CURRENT_TIMESTAMP);
-    CREATE TABLE revisiones (id INTEGER PRIMARY KEY, solicitudId INTEGER, revisorId INTEGER, accion TEXT,
-      comentario TEXT, estadoAntes TEXT, estadoDespues TEXT, creadoEn TEXT DEFAULT CURRENT_TIMESTAMP);
-  `);
-  base.close();
-
-  const prisma = new PrismaClient({ adapter: new PrismaLibSql({ url: pathToFileURL(archivo).href }) });
+  const fixture = await crearBasePostgresSuite(__filename);
+  const { prisma } = fixture;
   const roles = new Map([["operador=operador", 3], ["administrador=administrador", 4], ["estudiante=estudiante", 1]]);
   const autenticar = (req, res, next) => {
     const id = roles.get(req.headers.cookie);
@@ -57,30 +28,32 @@ async function crearContexto() {
   const api = `http://127.0.0.1:${servidor.address().port}/api`;
 
   async function restablecer() {
-    for (const tabla of ["revisiones", "auditoria", "documentos_solicitud", "historial_estados", "validaciones_requisito", "solicitudes", "plantillas_requisito", "estudiantes", "programas", "usuarios"]) {
-      await prisma.$executeRawUnsafe(`DELETE FROM ${tabla}`);
-    }
-    await prisma.$executeRawUnsafe("INSERT INTO programas VALUES (1, 'Doctorado de prueba', 'doctorado', 1)");
-    await prisma.$executeRawUnsafe("INSERT INTO estudiantes VALUES (1, 1, 'TEST1', 1)");
-    await prisma.$executeRawUnsafe("INSERT INTO plantillas_requisito VALUES (1, 1, 'grado_doctor', 'Requisito documental', 'Descripción', 'documental', 1, 1, 1)");
-    for (const [id, rol] of [[1, "estudiante"], [3, "operador"], [4, "administrador"]]) {
-      await prisma.$executeRawUnsafe("INSERT INTO usuarios VALUES (?, ?, 'Prueba', ?, ?, ?, ?, 1)", id, rol, String(id).padStart(8, "0"), `cuenta${id}@test.invalid`, "hash-sintético", rol);
-    }
-    const estados = ["presentado", "en_revision", "en_revision", "aprobado", "presentado", "en_revision"];
-    for (let i = 0; i < estados.length; i += 1) {
-      const id = i + 1;
-      await prisma.$executeRawUnsafe(
-        "INSERT INTO solicitudes (id, codigo, estudianteId, usuarioId, programaId, tipoTramite, estado, presentadoEn) VALUES (?, ?, 1, 1, 1, 'grado_doctor', ?, '2026-01-01T00:00:00.000Z')",
-        id, `SIGEP-P3-${id}`, estados[i],
-      );
-      await prisma.$executeRawUnsafe(
-        "INSERT INTO validaciones_requisito (id, solicitudId, plantillaId, estado) VALUES (?, ?, 1, ?)",
-        id, id, id === 3 || id === 4 ? "cumplido" : "pendiente",
-      );
-    }
-    await prisma.$executeRawUnsafe("INSERT INTO documentos_solicitud VALUES (1, 1, 'Requisito', '1', 'documento.pdf', 'ruta-invalida.txt', 'application/pdf', 20, 1, CURRENT_TIMESTAMP, NULL)");
+    await prisma.$transaction(async (tx) => {
+      await tx.revision.deleteMany();
+      await tx.auditoria.deleteMany();
+      await tx.documentoSolicitud.deleteMany();
+      await tx.historialEstado.deleteMany();
+      await tx.validacionRequisito.deleteMany();
+      await tx.solicitud.deleteMany();
+      await tx.plantillaRequisito.deleteMany();
+      await tx.estudiante.deleteMany();
+      await tx.programa.deleteMany();
+      await tx.usuario.deleteMany();
+      await tx.programa.create({ data: { id: 1, nombre: "Doctorado de prueba", tipo: "doctorado", facultad: "Ciencias" } });
+      await tx.usuario.createMany({ data: [
+        { id: 1, nombres: "Estudiante", apellidos: "Prueba", dni: "00000001", email: "cuenta1@test.invalid", password: "hash-sint?tico", rol: "estudiante" },
+        { id: 3, nombres: "Operador", apellidos: "Prueba", dni: "00000003", email: "cuenta3@test.invalid", password: "hash-sint?tico", rol: "operador" },
+        { id: 4, nombres: "Administrador", apellidos: "Prueba", dni: "00000004", email: "cuenta4@test.invalid", password: "hash-sint?tico", rol: "administrador" },
+      ] });
+      await tx.estudiante.create({ data: { id: 1, usuarioId: 1, codigoUniv: "TEST1", programaId: 1 } });
+      await tx.plantillaRequisito.create({ data: { id: 1, programaId: 1, tipoTramite: "grado_doctor", codigo: "REQ-ACCIONES", nombre: "Requisito documental", descripcion: "Descripci?n", tipo: "documental" } });
+      const estados = ["presentado", "en_revision", "en_revision", "aprobado", "presentado", "en_revision"];
+      await tx.solicitud.createMany({ data: estados.map((estado, index) => ({ id: index + 1, codigo: "SIGEP-P3-" + (index + 1), estudianteId: 1, usuarioId: 1, programaId: 1, tipoTramite: "grado_doctor", estado, presentadoEn: new Date("2026-01-01T00:00:00.000Z") })) });
+      await tx.validacionRequisito.createMany({ data: estados.map((_, index) => ({ id: index + 1, solicitudId: index + 1, plantillaId: 1, estado: index === 2 || index === 3 ? "cumplido" : "pendiente" })) });
+      await tx.documentoSolicitud.create({ data: { id: 1, solicitudId: 1, nombre: "Requisito", tipoDoc: "1", nombreArchivo: "documento.pdf", rutaArchivo: "ruta-invalida.txt", mimeType: "application/pdf", tamanoBytes: 20, subidoPor: 1 } });
+    });
+    await fixture.sincronizarSecuencias();
   }
-
   async function pedir(ruta, { rol, metodo = "GET", datos, sinJson } = {}) {
     const response = await fetch(api + ruta, {
       method: metodo,
@@ -97,8 +70,8 @@ async function crearContexto() {
 
   async function cerrar() {
     servidor.closeAllConnections();
-    servidor.close();
-    await prisma.$disconnect();
+    if (servidor.listening) await new Promise((resolve) => servidor.close(resolve));
+    await fixture.cerrar();
     await rm(directorio, { recursive: true, maxRetries: 24, retryDelay: 250 });
   }
   return { prisma, pedir, restablecer, cerrar };

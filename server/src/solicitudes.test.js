@@ -3,10 +3,7 @@ const { once } = require("node:events");
 const { mkdtemp, rm } = require("node:fs/promises");
 const { tmpdir } = require("node:os");
 const { join } = require("node:path");
-const { DatabaseSync } = require("node:sqlite");
-const { pathToFileURL } = require("node:url");
-const { PrismaClient } = require("@prisma/client");
-const { PrismaLibSql } = require("@prisma/adapter-libsql");
+const { crearBasePostgresSuite } = require("./test/postgres-suite");
 const bcrypt = require("bcryptjs");
 const express = require("express");
 const { registrarIdentidad } = require("./identidad");
@@ -22,42 +19,8 @@ const pdf = "%PDF-1.7\narchivo de prueba\n%%EOF\n";
 
 async function crearContexto() {
   const carpeta = await mkdtemp(join(tmpdir(), "sigep-expedientes-"));
-  const archivo = join(carpeta, "expedientes.sqlite");
-  const base = new DatabaseSync(archivo);
-  base.exec(`
-    CREATE TABLE usuarios (id INTEGER PRIMARY KEY, nombres TEXT, apellidos TEXT, dni TEXT, email TEXT,
-      password TEXT, rol TEXT, activo INTEGER);
-    CREATE TABLE estudiantes (id INTEGER PRIMARY KEY, usuarioId INTEGER, codigoUniv TEXT, programaId INTEGER);
-    CREATE TABLE programas (id INTEGER PRIMARY KEY, nombre TEXT, tipo TEXT, activo INTEGER);
-    CREATE TABLE plantillas_requisito (id INTEGER PRIMARY KEY, programaId INTEGER, tipoTramite TEXT,
-      nombre TEXT, descripcion TEXT, tipo TEXT, obligatorio INTEGER, orden INTEGER, activo INTEGER);
-    CREATE TABLE solicitudes (id INTEGER PRIMARY KEY, codigo TEXT UNIQUE, estudianteId INTEGER, usuarioId INTEGER,
-      programaId INTEGER, tipoTramite TEXT, estado TEXT DEFAULT 'borrador', observaciones TEXT,
-      creadoEn TEXT DEFAULT CURRENT_TIMESTAMP, actualizadoEn TEXT, presentadoEn TEXT, aprobadoEn TEXT);
-    CREATE TABLE validaciones_requisito (id INTEGER PRIMARY KEY, solicitudId INTEGER, plantillaId INTEGER,
-      estado TEXT DEFAULT 'pendiente', evidencia TEXT, observacion TEXT, validadoPor INTEGER, validadoEn TEXT,
-      creadoEn TEXT DEFAULT CURRENT_TIMESTAMP, actualizadoEn TEXT);
-    CREATE TABLE historial_estados (id INTEGER PRIMARY KEY, solicitudId INTEGER, estadoAntes TEXT, estadoDespues TEXT,
-      motivo TEXT, creadoEn TEXT DEFAULT CURRENT_TIMESTAMP);
-    CREATE TABLE documentos_solicitud (id INTEGER PRIMARY KEY, solicitudId INTEGER, nombre TEXT, tipoDoc TEXT,
-      nombreArchivo TEXT, rutaArchivo TEXT, mimeType TEXT, tamanoBytes INTEGER, subidoPor INTEGER,
-      creadoEn TEXT DEFAULT CURRENT_TIMESTAMP, reemplazadoPor INTEGER);
-    CREATE TABLE auditoria (id INTEGER PRIMARY KEY, usuarioId INTEGER, accion TEXT, entidad TEXT, entidadId INTEGER,
-      detalles TEXT, ip TEXT, creadoEn TEXT DEFAULT CURRENT_TIMESTAMP);
-    CREATE TABLE revisiones (id INTEGER PRIMARY KEY, solicitudId INTEGER, revisorId INTEGER, accion TEXT,
-      comentario TEXT, estadoAntes TEXT, estadoDespues TEXT, creadoEn TEXT DEFAULT CURRENT_TIMESTAMP);
-    INSERT INTO programas VALUES (1, 'Doctorado de prueba', 'doctorado', 1);
-    INSERT INTO estudiantes VALUES (1, 1, 'TEST1', 1), (2, 2, 'TEST2', 1);
-    INSERT INTO plantillas_requisito VALUES (1, 1, 'grado_doctor', 'Documento de prueba', 'Descripción', 'documental', 1, 1, 1);
-  `);
-  const hash = bcrypt.hashSync(clave, 4);
-  const crearUsuario = base.prepare("INSERT INTO usuarios VALUES (?, ?, 'Prueba', ?, ?, ?, ?, 1)");
-  for (const [id, rol] of [[1, "estudiante"], [2, "estudiante"], [3, "operador"], [4, "administrador"]]) {
-    crearUsuario.run(id, rol, String(id).padStart(8, "0"), `cuenta${id}@test.invalid`, hash, rol);
-  }
-  base.close();
-
-  const prisma = new PrismaClient({ adapter: new PrismaLibSql({ url: pathToFileURL(archivo).href }) });
+  const fixture = await crearBasePostgresSuite(__filename);
+  const { prisma } = fixture;
   const app = express();
   app.use(express.json());
   const autenticar = registrarIdentidad(app, prisma, "secreto-desechable-de-prueba-seguro");
@@ -98,21 +61,29 @@ async function crearContexto() {
     return token;
   }
   async function restablecer() {
-    for (const tabla of ["revisiones", "auditoria", "documentos_solicitud", "historial_estados", "validaciones_requisito", "solicitudes", "plantillas_requisito", "estudiantes", "programas", "usuarios"]) {
-      await prisma.$executeRawUnsafe(`DELETE FROM ${tabla}`);
-    }
-    await prisma.$executeRawUnsafe("INSERT INTO programas VALUES (1, 'Doctorado de prueba', 'doctorado', 1)");
-    await prisma.$executeRawUnsafe("INSERT INTO estudiantes VALUES (1, 1, 'TEST1', 1), (2, 2, 'TEST2', 1)");
-    await prisma.$executeRawUnsafe("INSERT INTO plantillas_requisito VALUES (1, 1, 'grado_doctor', 'Documento de prueba', 'Descripción', 'documental', 1, 1, 1)");
-    const hash = bcrypt.hashSync(clave, 4);
-    for (const [id, rol] of [[1, "estudiante"], [2, "estudiante"], [3, "operador"], [4, "administrador"]]) {
-      await prisma.$executeRawUnsafe("INSERT INTO usuarios VALUES (?, ?, 'Prueba', ?, ?, ?, ?, 1)", id, rol, String(id).padStart(8, "0"), `cuenta${id}@test.invalid`, hash, rol);
-    }
+    await prisma.$transaction(async (tx) => {
+      await tx.revision.deleteMany();
+      await tx.auditoria.deleteMany();
+      await tx.documentoSolicitud.deleteMany();
+      await tx.historialEstado.deleteMany();
+      await tx.validacionRequisito.deleteMany();
+      await tx.solicitud.deleteMany();
+      await tx.plantillaRequisito.deleteMany();
+      await tx.estudiante.deleteMany();
+      await tx.programa.deleteMany();
+      await tx.usuario.deleteMany();
+      await tx.programa.create({ data: { id: 1, nombre: "Doctorado de prueba", tipo: "doctorado", facultad: "Ciencias" } });
+      const hash = bcrypt.hashSync(clave, 4);
+      await tx.usuario.createMany({ data: [1, 2, 3, 4].map((id) => ({ id, nombres: "Cuenta" + id, apellidos: "Prueba", dni: String(id).padStart(8, "0"), email: "cuenta" + id + "@test.invalid", password: hash, rol: id <= 2 ? "estudiante" : id === 3 ? "operador" : "administrador" })) });
+      await tx.estudiante.createMany({ data: [1, 2].map((id) => ({ id, usuarioId: id, codigoUniv: "TEST" + id, programaId: 1 })) });
+      await tx.plantillaRequisito.create({ data: { id: 1, programaId: 1, tipoTramite: "grado_doctor", codigo: "REQ-SOLICITUD", nombre: "Documento de prueba", descripcion: "Descripci?n", tipo: "documental" } });
+    });
+    await fixture.sincronizarSecuencias();
   }
   async function cerrar() {
     servidor.closeAllConnections();
-    servidor.close();
-    await prisma.$disconnect();
+    if (servidor.listening) await new Promise((resolve) => servidor.close(resolve));
+    await fixture.cerrar();
     await rm(carpeta, { recursive: true, maxRetries: 24, retryDelay: 250 });
   }
   return { prisma, pedir, ingresar, restablecer, cerrar };

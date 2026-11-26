@@ -3,10 +3,7 @@ const { once } = require("node:events");
 const { mkdtemp, rm } = require("node:fs/promises");
 const { tmpdir } = require("node:os");
 const { join } = require("node:path");
-const { DatabaseSync } = require("node:sqlite");
-const { pathToFileURL } = require("node:url");
-const { PrismaClient } = require("@prisma/client");
-const { PrismaLibSql } = require("@prisma/adapter-libsql");
+const { crearBasePostgresSuite } = require("./test/postgres-suite");
 const bcrypt = require("bcryptjs");
 const express = require("express");
 const { registrarIdentidad } = require("./identidad");
@@ -16,53 +13,24 @@ jest.setTimeout(30000);
 
 async function crearContexto() {
   const directorio = await mkdtemp(join(tmpdir(), "sigep-revision-listado-"));
-  const archivo = join(directorio, "revision.sqlite");
-  const base = new DatabaseSync(archivo);
-  base.exec(`
-    CREATE TABLE usuarios (id INTEGER PRIMARY KEY, nombres TEXT, apellidos TEXT, dni TEXT, email TEXT,
-      password TEXT, rol TEXT, activo INTEGER);
-    CREATE TABLE estudiantes (id INTEGER PRIMARY KEY, usuarioId INTEGER, codigoUniv TEXT, programaId INTEGER);
-    CREATE TABLE programas (id INTEGER PRIMARY KEY, nombre TEXT, tipo TEXT, activo INTEGER);
-    CREATE TABLE plantillas_requisito (id INTEGER PRIMARY KEY, programaId INTEGER, tipoTramite TEXT,
-      nombre TEXT, descripcion TEXT, tipo TEXT, obligatorio INTEGER, orden INTEGER, activo INTEGER);
-    CREATE TABLE solicitudes (id INTEGER PRIMARY KEY, codigo TEXT UNIQUE, estudianteId INTEGER, usuarioId INTEGER,
-      programaId INTEGER, tipoTramite TEXT, estado TEXT DEFAULT 'borrador', observaciones TEXT,
-      creadoEn TEXT DEFAULT CURRENT_TIMESTAMP, actualizadoEn TEXT, presentadoEn TEXT, aprobadoEn TEXT);
-    CREATE TABLE validaciones_requisito (id INTEGER PRIMARY KEY, solicitudId INTEGER, plantillaId INTEGER,
-      estado TEXT DEFAULT 'pendiente', evidencia TEXT, observacion TEXT, validadoPor INTEGER, validadoEn TEXT,
-      creadoEn TEXT DEFAULT CURRENT_TIMESTAMP, actualizadoEn TEXT);
-    CREATE TABLE historial_estados (id INTEGER PRIMARY KEY, solicitudId INTEGER, estadoAntes TEXT,
-      estadoDespues TEXT, motivo TEXT, creadoEn TEXT DEFAULT CURRENT_TIMESTAMP);
-    CREATE TABLE documentos_solicitud (id INTEGER PRIMARY KEY, solicitudId INTEGER, nombre TEXT, tipoDoc TEXT,
-      nombreArchivo TEXT, rutaArchivo TEXT, mimeType TEXT, tamanoBytes INTEGER, subidoPor INTEGER,
-      creadoEn TEXT DEFAULT CURRENT_TIMESTAMP, reemplazadoPor INTEGER);
-    CREATE TABLE auditoria (id INTEGER PRIMARY KEY, usuarioId INTEGER, accion TEXT, entidad TEXT, entidadId INTEGER,
-      detalles TEXT, ip TEXT, creadoEn TEXT DEFAULT CURRENT_TIMESTAMP);
-    CREATE TABLE revisiones (id INTEGER PRIMARY KEY, solicitudId INTEGER, revisorId INTEGER, accion TEXT,
-      comentario TEXT, estadoAntes TEXT, estadoDespues TEXT, creadoEn TEXT DEFAULT CURRENT_TIMESTAMP);
-    INSERT INTO programas VALUES (1, 'Programa prueba', 'doctorado', 1);
-    INSERT INTO estudiantes VALUES (1, 3, 'EST-1', 1);
-  `);
+  const fixture = await crearBasePostgresSuite(__filename);
+  const { prisma } = fixture;
   const hash = bcrypt.hashSync("credencial-prueba", 4);
-  const usuario = base.prepare("INSERT INTO usuarios VALUES (?, ?, ?, ?, ?, ?, ?, 1)");
-  usuario.run(1, "Ana", "Operadora", "10000001", "ana@test.invalid", hash, "operador");
-  usuario.run(2, "Luis", "Administrador", "10000002", "luis@test.invalid", hash, "administrador");
-  usuario.run(3, "Carla", "Estudiante", "12345678", "carla@test.invalid", hash, "estudiante");
-  for (let id = 4; id <= 27; id += 1) {
-    usuario.run(id, `Persona${id}`, `Apellido${id}`, `8765${String(id).padStart(4, "0")}`, `persona${id}@test.invalid`, hash, "estudiante");
-  }
-  const solicitud = base.prepare(`INSERT INTO solicitudes
-    (id, codigo, estudianteId, usuarioId, programaId, tipoTramite, estado, presentadoEn)
-    VALUES (?, ?, 1, ?, 1, ?, ?, '2026-01-01T00:00:00.000Z')`);
+  await prisma.programa.create({ data: { id: 1, nombre: "Programa prueba", tipo: "doctorado", facultad: "Ciencias" } });
+  const usuarios = [
+    { id: 1, nombres: "Ana", apellidos: "Operadora", dni: "10000001", email: "ana@test.invalid", password: hash, rol: "operador" },
+    { id: 2, nombres: "Luis", apellidos: "Administrador", dni: "10000002", email: "luis@test.invalid", password: hash, rol: "administrador" },
+    { id: 3, nombres: "Carla", apellidos: "Estudiante", dni: "12345678", email: "carla@test.invalid", password: hash, rol: "estudiante" },
+  ];
+  for (let id = 4; id <= 27; id += 1) usuarios.push({ id, nombres: "Persona" + id, apellidos: "Apellido" + id, dni: "8765" + String(id).padStart(4, "0"), email: "persona" + id + "@test.invalid", password: hash, rol: "estudiante" });
+  await prisma.usuario.createMany({ data: usuarios });
+  await prisma.estudiante.create({ data: { id: 1, usuarioId: 3, codigoUniv: "EST-1", programaId: 1 } });
   const tipos = ["grado_doctor", "grado_maestro", "titulo_segunda_especialidad", "certificado_diplomado", "certificacion_modulos"];
   const estados = ["en_revision", "observado", "aprobado", "emitido"];
-  for (let id = 1; id <= 24; id += 1) {
-    solicitud.run(id, `SIGEP-${String(id).padStart(3, "0")}`, id + 3, tipos[(id - 1) % tipos.length], estados[(id - 1) % estados.length]);
-  }
-  solicitud.run(25, "BUSCAR-CODIGO", 3, "grado_doctor", "en_revision");
-  base.close();
-
-  const prisma = new PrismaClient({ adapter: new PrismaLibSql({ url: pathToFileURL(archivo).href }) });
+  const solicitudes = Array.from({ length: 24 }, (_, index) => ({ id: index + 1, codigo: "SIGEP-" + String(index + 1).padStart(3, "0"), estudianteId: 1, usuarioId: index + 4, programaId: 1, tipoTramite: tipos[index % tipos.length], estado: estados[index % estados.length], presentadoEn: new Date("2026-01-01T00:00:00.000Z") }));
+  solicitudes.push({ id: 25, codigo: "BUSCAR-CODIGO", estudianteId: 1, usuarioId: 3, programaId: 1, tipoTramite: "grado_doctor", estado: "en_revision", presentadoEn: new Date("2026-01-01T00:00:00.000Z") });
+  await prisma.solicitud.createMany({ data: solicitudes });
+  await fixture.sincronizarSecuencias();
   const app = express();
   app.use(express.json());
   const autenticar = registrarIdentidad(app, prisma, "secreto-temporal-de-revision-seguro");
@@ -94,7 +62,7 @@ async function crearContexto() {
       servidor.closeAllConnections();
       await cerrado;
     }
-    await prisma.$disconnect();
+    await fixture.cerrar();
     await rm(directorio, { recursive: true, maxRetries: 24, retryDelay: 250 });
   }
   return { pedir, token, cerrar };

@@ -1,12 +1,6 @@
 const assert = require("node:assert/strict");
 const { once } = require("node:events");
-const { mkdtemp, rm } = require("node:fs/promises");
-const { tmpdir } = require("node:os");
-const { join } = require("node:path");
-const { DatabaseSync } = require("node:sqlite");
-const { pathToFileURL } = require("node:url");
-const { PrismaClient } = require("@prisma/client");
-const { PrismaLibSql } = require("@prisma/adapter-libsql");
+const { crearBasePostgresSuite } = require("./test/postgres-suite");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const express = require("express");
@@ -24,34 +18,15 @@ const variablesGoogle = [
 const entornoOriginal = new Map();
 
 async function crearContexto(claveSesion = secreto) {
-  const directorio = await mkdtemp(join(tmpdir(), "sigep-identidad-"));
-  const archivo = join(directorio, "identidad.sqlite");
-  const base = new DatabaseSync(archivo);
-  base.exec(`
-    CREATE TABLE usuarios (
-      id INTEGER PRIMARY KEY, nombres TEXT NOT NULL, apellidos TEXT NOT NULL, dni TEXT NOT NULL UNIQUE,
-      email TEXT NOT NULL UNIQUE, password TEXT NOT NULL, rol TEXT NOT NULL, activo INTEGER NOT NULL DEFAULT 1,
-      creadoEn TEXT DEFAULT CURRENT_TIMESTAMP, actualizadoEn TEXT DEFAULT CURRENT_TIMESTAMP
-    );
-    CREATE TABLE programas (
-      id INTEGER PRIMARY KEY, nombre TEXT NOT NULL, tipo TEXT NOT NULL, facultad TEXT NOT NULL,
-      activo INTEGER NOT NULL DEFAULT 1, creadoEn TEXT DEFAULT CURRENT_TIMESTAMP
-    );
-    CREATE TABLE estudiantes (
-      id INTEGER PRIMARY KEY, usuarioId INTEGER NOT NULL UNIQUE, codigoUniv TEXT NOT NULL UNIQUE,
-      programaId INTEGER NOT NULL, telefono TEXT, estadoAcad TEXT DEFAULT 'activo',
-      creditosAprobados INTEGER DEFAULT 0, promedioGeneral REAL DEFAULT 0,
-      creadoEn TEXT DEFAULT CURRENT_TIMESTAMP, actualizadoEn TEXT DEFAULT CURRENT_TIMESTAMP
-    );
-    INSERT INTO programas VALUES (1, 'Doctorado de prueba', 'doctorado', 'Ciencias', 1, CURRENT_TIMESTAMP);
-  `);
+  const fixture = await crearBasePostgresSuite(__filename);
+  const { prisma } = fixture;
   const hash = bcrypt.hashSync(clave, 4);
-  const usuario = base.prepare("INSERT INTO usuarios (id, nombres, apellidos, dni, email, password, rol, activo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-  usuario.run(1, "Ada", "Administradora", "12345678", "admin@test.invalid", hash, "administrador", 1);
-  usuario.run(2, "Ina", "Inactiva", "87654321", "inactiva@test.invalid", hash, "estudiante", 0);
-  base.close();
-
-  const prisma = new PrismaClient({ adapter: new PrismaLibSql({ url: pathToFileURL(archivo).href }) });
+  await prisma.programa.create({ data: { id: 1, nombre: "Doctorado de prueba", tipo: "doctorado", facultad: "Ciencias" } });
+  await prisma.usuario.createMany({ data: [
+    { id: 1, nombres: "Ada", apellidos: "Administradora", dni: "12345678", email: "admin@test.invalid", password: hash, rol: "administrador", activo: true },
+    { id: 2, nombres: "Ina", apellidos: "Inactiva", dni: "87654321", email: "inactiva@test.invalid", password: hash, rol: "estudiante", activo: false },
+  ] });
+  await fixture.sincronizarSecuencias();
   const app = express();
   app.use(express.json());
   registrarIdentidad(app, prisma, claveSesion);
@@ -99,12 +74,7 @@ async function crearContexto(claveSesion = secreto) {
   async function cerrar() {
     servidor.closeAllConnections();
     if (servidor.listening) await new Promise((resolve) => servidor.close(resolve));
-    await prisma.$disconnect();
-    try {
-      await rm(directorio, { recursive: true, maxRetries: 3, retryDelay: 100 });
-    } catch (error) {
-      console.warn("No se pudo eliminar el directorio temporal de identidad:", error.code ?? error.message);
-    }
+    await fixture.cerrar();
   }
 
   return { prisma, ingresar, pedir, cerrar };

@@ -1,12 +1,6 @@
 const assert = require("node:assert/strict");
-const { mkdtemp, rm } = require("node:fs/promises");
 const { once } = require("node:events");
-const { tmpdir } = require("node:os");
-const { join } = require("node:path");
-const { DatabaseSync } = require("node:sqlite");
-const { pathToFileURL } = require("node:url");
-const { PrismaClient } = require("@prisma/client");
-const { PrismaLibSql } = require("@prisma/adapter-libsql");
+const { crearBasePostgresSuite } = require("./test/postgres-suite");
 const express = require("express");
 const { leerNormativa, registrarCatalogo } = require("./catalogo-grados");
 
@@ -21,26 +15,18 @@ afterEach(async () => {
 });
 
 test("C-01 a C-07: el catálogo público filtra programas y requisitos en SQLite", async () => {
-  const directorio = await mkdtemp(join(tmpdir(), "sigep-catalogo-"));
-  const archivo = join(directorio, "catalogo.sqlite");
-  const base = new DatabaseSync(archivo);
-  base.exec(`
-    CREATE TABLE programas (id INTEGER PRIMARY KEY, nombre TEXT, tipo TEXT, activo INTEGER);
-    CREATE TABLE plantillas_requisito (
-      id INTEGER PRIMARY KEY, programaId INTEGER, tipoTramite TEXT, nombre TEXT,
-      descripcion TEXT, tipo TEXT, obligatorio INTEGER, versionNorm TEXT, orden INTEGER, activo INTEGER
-    );
-    INSERT INTO programas VALUES
-      (1, 'Programa de prueba', 'doctorado', 1),
-      (2, 'Programa inactivo', 'doctorado', 0),
-      (3, 'Otro tipo de programa', 'maestria', 1);
-    INSERT INTO plantillas_requisito VALUES
-      (1, 1, 'grado_doctor', 'Plantilla de prueba', 'Texto de prueba', 'documental', 1, 'v-prueba', 1, 1),
-      (2, 1, 'grado_doctor', 'Plantilla inactiva', 'Texto de prueba', 'documental', 1, 'v-prueba', 2, 0);
-  `);
-  base.close();
-
-  const prisma = new PrismaClient({ adapter: new PrismaLibSql({ url: pathToFileURL(archivo).href }) });
+  const fixture = await crearBasePostgresSuite(__filename);
+  const { prisma } = fixture;
+  await prisma.programa.createMany({ data: [
+    { id: 1, nombre: "Programa de prueba", tipo: "doctorado", facultad: "Ciencias", activo: true },
+    { id: 2, nombre: "Programa inactivo", tipo: "doctorado", facultad: "Ciencias", activo: false },
+    { id: 3, nombre: "Otro tipo de programa", tipo: "maestria", facultad: "Letras", activo: true },
+  ] });
+  await prisma.plantillaRequisito.createMany({ data: [
+    { id: 1, programaId: 1, tipoTramite: "grado_doctor", codigo: "REQ-CAT-1", nombre: "Plantilla de prueba", descripcion: "Texto de prueba", tipo: "documental", obligatorio: true, versionNorm: "v-prueba", orden: 1, activo: true },
+    { id: 2, programaId: 1, tipoTramite: "grado_doctor", codigo: "REQ-CAT-2", nombre: "Plantilla inactiva", descripcion: "Texto de prueba", tipo: "documental", obligatorio: true, versionNorm: "v-prueba", orden: 2, activo: false },
+  ] });
+  await fixture.sincronizarSecuencias();
   const app = express();
   const normativa = leerNormativa(JSON.stringify([
     { tramite: "grado_doctor", programaId: 1, fuente: "Referencia de prueba", observaciones: "Observación de prueba" },
@@ -50,8 +36,7 @@ test("C-01 a C-07: el catálogo público filtra programas y requisitos en SQLite
   limpiar = async () => {
     servidor.closeAllConnections();
     servidor.close();
-    await prisma.$disconnect();
-    await rm(directorio, { recursive: true, maxRetries: 24, retryDelay: 250 });
+    await fixture.cerrar();
   };
   await once(servidor, "listening");
   const url = `http://127.0.0.1:${servidor.address().port}/api/catalogo-grados`;
