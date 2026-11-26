@@ -1,7 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "@jest/globals";
 import { POR_PAGINA } from "@/app/lib/constants";
 
-describe("entorno Vitest", () => {
+describe("entorno Jest", () => {
   it("resuelve el alias del cliente y fija la zona horaria de Lima", () => {
     expect(POR_PAGINA).toBe(10);
     expect(process.env.TZ).toBe("America/Lima");
