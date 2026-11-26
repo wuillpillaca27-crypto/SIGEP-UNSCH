@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import AsistenteCertificacion from "./asistente";
+import Asistente from "../../grados-titulos/iniciar-solicitud/asistente";
 import { SelloPosgrado } from "../../grados-titulos/orientacion";
 import { certificaciones, esCertificacion } from "../../grados-titulos/tramites";
 import styles from "../../grados-titulos/orientacion.module.css";
@@ -25,9 +25,11 @@ async function Contenido({ searchParams }: Props) {
         <SelloPosgrado />
         <h1>Solicitar una certificación</h1>
         {seleccion && <p>{certificaciones[seleccion].nombre}</p>}
-        <div className={styles.acciones}><Link href="/certificaciones/requisitos">Consultar requisitos</Link></div>
+        <div className={styles.acciones}>
+          <Link href={seleccion ? `/certificaciones/${seleccion}#requisitos` : "/certificaciones/requisitos"}>Consultar requisitos</Link>
+        </div>
       </header>
-      <AsistenteCertificacion seleccion={seleccion} />
+      <Asistente key={seleccion ?? "certificaciones"} seleccion={seleccion} certificaciones />
     </main>
   );
 }

@@ -1,14 +1,15 @@
 const { tipoPorPrograma } = require("./solicitudes");
+const { facultadDemostracion, programasVisibles, requisitosVisibles } = require("./datos-demostracion");
 
 const tipos = new Map(Object.entries(tipoPorPrograma).map(([programa, tramite]) => [tramite, programa]));
 
 function leerNormativa(texto) {
-  const registros = JSON.parse(texto);
+  const registros = JSON.parse(texto.replace(/^\uFEFF/, ""));
   if (!Array.isArray(registros)) throw new Error("Se esperaba una lista de registros normativos.");
   const resultado = new Map();
   for (const entrada of registros) {
-    const { tramite, programaId, fuente, costos, plazos, observaciones } = entrada ?? {};
-    const datos = { fuente, costos, plazos, observaciones };
+    const { tramite, programaId, fuente, costos, plazos, procedimiento, observaciones } = entrada ?? {};
+    const datos = { fuente, costos, plazos, procedimiento, observaciones };
     const clave = `${tramite}/${programaId}`;
     if (!tipos.has(tramite) || !Number.isSafeInteger(programaId) || programaId < 1 ||
         typeof fuente !== "string" || !fuente.trim() || resultado.has(clave) ||
@@ -26,7 +27,7 @@ function registrarCatalogo(app, prisma, normativa = new Map()) {
     if (!tipo) return res.status(404).json({ error: "Trámite desconocido" });
 
     const datos = await prisma.programa.findMany({
-      where: { activo: true, tipo },
+      where: { activo: true, tipo, ...programasVisibles() },
       select: { id: true, nombre: true },
       orderBy: [{ nombre: "asc" }, { id: "asc" }],
     });
@@ -42,16 +43,20 @@ function registrarCatalogo(app, prisma, normativa = new Map()) {
     }
 
     const programa = await prisma.programa.findFirst({
-      where: { id, tipo, activo: true },
+      where: { id, tipo, activo: true, ...programasVisibles() },
       select: {
+        facultad: true,
         plantillasRequisito: {
-          where: { activo: true, tipoTramite },
+          where: { activo: true, tipoTramite, ...requisitosVisibles() },
           select: { id: true, nombre: true, descripcion: true, tipo: true, obligatorio: true, versionNorm: true },
           orderBy: [{ orden: "asc" }, { id: "asc" }],
         },
       },
     });
     if (!programa) return res.status(404).json({ error: "Programa desconocido" });
+    if (programa.facultad === facultadDemostracion) {
+      return res.json({ requisitos: programa.plantillasRequisito, demostracion: true });
+    }
     return res.json({ requisitos: programa.plantillasRequisito, ...normativa.get(`${tipoTramite}/${id}`) });
   });
 }

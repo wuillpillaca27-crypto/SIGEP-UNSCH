@@ -122,6 +122,23 @@ describe("Solicitudes, revisión e identidad", () => {
     await ctx.pedir("/solicitudes/opciones-certificacion", 403, { token: operador });
   });
 
+  test("las opciones académicas identifican el trámite propio y no duplican borradores simultáneos", async () => {
+    await ctx.pedir("/solicitudes/opciones", 401);
+    const operador = await ctx.ingresar(3);
+    await ctx.pedir("/solicitudes/opciones", 403, { token: operador });
+    const token = await ctx.ingresar(1);
+    const opciones = await ctx.pedir("/solicitudes/opciones", 200, { token });
+    expect(opciones.programas).toMatchObject([{ id: 1, tramites: [{ clave: "doctor", tipoTramite: "grado_doctor" }] }]);
+    const datos = { tipoTramite: "grado_doctor", programaId: 1 };
+    const borradores = await Promise.all([
+      ctx.pedir("/solicitudes", 200, { token, metodo: "POST", datos }),
+      ctx.pedir("/solicitudes", 200, { token, metodo: "POST", datos }),
+    ]);
+    expect(borradores[0].id).toBe(borradores[1].id);
+    const propias = await ctx.pedir("/solicitudes", 200, { token });
+    expect(propias.map(({ id }) => id)).toEqual([borradores[0].id]);
+  });
+
   test("explica la elegibilidad y solo muestra la matrícula propia", async () => {
     const token = await ctx.ingresar(1);
     const noCertificable = await ctx.pedir("/solicitudes/opciones-certificacion", 200, { token });

@@ -97,6 +97,7 @@
       "get": {
         "tags": ["Identidad Google"],
         "summary": "Iniciar el flujo de autenticación con Google",
+        "parameters": [{ "name": "continuar", "in": "query", "description": "Ruta local de inicio de solicitud académica.", "schema": { "type": "string" } }],
         "responses": {
           "302": { "description": "Redirige al proveedor Google cuando está configurado." },
           "503": { "$ref": "#/components/responses/NoDisponible" },
@@ -116,6 +117,18 @@
           "302": { "description": "Redirige a la aplicación después de procesar la autenticación." },
           "503": { "$ref": "#/components/responses/NoDisponible" },
           "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/solicitudes/opciones": {
+      "get": {
+        "tags": ["Solicitudes"],
+        "summary": "Consultar trámites académicos habilitados para la matrícula autenticada",
+        "security": [{ "cookieAuth": [] }],
+        "responses": {
+          "200": { "description": "Devuelve programas con sus trámites autorizados, programaRegistrado y el motivo de indisponibilidad cuando corresponde." },
+          "401": { "$ref": "#/components/responses/NoAutorizado" },
+          "403": { "$ref": "#/components/responses/Prohibido" }
         }
       }
     },
@@ -420,7 +433,7 @@
         "required": ["tipoTramite"],
         "properties": {
           "tipoTramite": { "type": "string", "enum": ["grado_maestro", "grado_doctor", "titulo_segunda_especialidad", "certificado_diplomado", "certificacion_modulos"] },
-          "programaId": { "type": "integer", "minimum": 1, "description": "Opcional; para certificaciones debe coincidir con el programa de la matrícula autenticada." }
+          "programaId": { "type": "integer", "minimum": 1, "description": "Opcional. Si se envía, debe coincidir con el programa de la matrícula autenticada." }
         }
       },
       "OpcionesCertificacion": {

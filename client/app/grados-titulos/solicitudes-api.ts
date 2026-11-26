@@ -18,16 +18,16 @@ export type Solicitud = {
   }[];
   historial: { id: number; estadoDespues: string; creadoEn: string; motivo: string | null }[];
 };
-export type OpcionesCertificacion = {
+export type OpcionesSolicitud = {
   programas: {
     id: number; nombre: string; tipo: string; activo: boolean;
-    certificaciones: {
+    tramites: {
       clave: string; nombre: string; tipoTramite: string;
       requisitos: { id: number; nombre: string; descripcion: string; tipo: string; obligatorio: boolean; versionNorm: string }[];
     }[];
   }[];
   programaRegistrado: { id: number; nombre: string; tipo: string; activo: boolean } | null;
-  motivo: "sin_matricula" | "programa_inactivo" | "tipo_no_certificable" | "sin_requisitos_activos" | null;
+  motivo: "sin_matricula" | "programa_inactivo" | "sin_requisitos_activos" | null;
 };
 
 export const solicitudes = {
@@ -35,7 +35,7 @@ export const solicitudes = {
     ...(/^\d{8}$/.test(identificador) ? { dni: identificador } : { email: identificador }), password,
   }),
   perfil: () => api.get<Perfil>("/auth/perfil"),
-  opcionesCertificacion: () => api.get<OpcionesCertificacion>("/solicitudes/opciones-certificacion"),
+  opciones: () => api.get<OpcionesSolicitud>("/solicitudes/opciones"),
   cerrarSesion: () => api.post<{ ok: boolean }>("/auth/logout", {}),
   listar: () => api.get<Solicitud[]>("/solicitudes"),
   crear: (tipoTramite: string, programaId?: number) => api.post<Solicitud>("/solicitudes", {

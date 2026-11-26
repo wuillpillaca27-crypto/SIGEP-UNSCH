@@ -14,22 +14,24 @@ afterEach(async () => {
   }
 });
 
-test("C-01 a C-07: el catálogo público filtra programas y requisitos en SQLite", async () => {
+test("C-01 a C-07: el catálogo público filtra programas y requisitos en PostgreSQL", async () => {
   const fixture = await crearBasePostgresSuite(__filename);
   const { prisma } = fixture;
   await prisma.programa.createMany({ data: [
     { id: 1, nombre: "Programa de prueba", tipo: "doctorado", facultad: "Ciencias", activo: true },
     { id: 2, nombre: "Programa inactivo", tipo: "doctorado", facultad: "Ciencias", activo: false },
     { id: 3, nombre: "Otro tipo de programa", tipo: "maestria", facultad: "Letras", activo: true },
+    { id: 4, nombre: "Programa de demostración", tipo: "doctorado", facultad: "Entorno local de demostración", activo: true },
   ] });
   await prisma.plantillaRequisito.createMany({ data: [
     { id: 1, programaId: 1, tipoTramite: "grado_doctor", codigo: "REQ-CAT-1", nombre: "Plantilla de prueba", descripcion: "Texto de prueba", tipo: "documental", obligatorio: true, versionNorm: "v-prueba", orden: 1, activo: true },
     { id: 2, programaId: 1, tipoTramite: "grado_doctor", codigo: "REQ-CAT-2", nombre: "Plantilla inactiva", descripcion: "Texto de prueba", tipo: "documental", obligatorio: true, versionNorm: "v-prueba", orden: 2, activo: false },
+    { id: 3, programaId: 1, tipoTramite: "grado_doctor", codigo: "DEMO-PRUEBA", nombre: "Plantilla de demostración", descripcion: "Texto de prueba", tipo: "documental", versionNorm: "Demostración" },
   ] });
   await fixture.sincronizarSecuencias();
   const app = express();
-  const normativa = leerNormativa(JSON.stringify([
-    { tramite: "grado_doctor", programaId: 1, fuente: "Referencia de prueba", observaciones: "Observación de prueba" },
+  const normativa = leerNormativa("\uFEFF" + JSON.stringify([
+    { tramite: "grado_doctor", programaId: 1, fuente: "Referencia de prueba", procedimiento: "Procedimiento de prueba", observaciones: "Observación de prueba" },
   ]));
   registrarCatalogo(app, prisma, normativa);
   const servidor = app.listen(0, "127.0.0.1");
@@ -53,10 +55,11 @@ test("C-01 a C-07: el catálogo público filtra programas y requisitos en SQLite
       tipo: "documental", obligatorio: true, versionNorm: "v-prueba",
     }],
     fuente: "Referencia de prueba",
+    procedimiento: "Procedimiento de prueba",
     observaciones: "Observación de prueba",
   });
 
-  for (const id of ["2", "3", "1e0"]) {
+  for (const id of ["2", "3", "4", "1e0"]) {
     const respuesta = await fetch(`${url}/grado_doctor/${id}`);
     assert.equal(respuesta.status, 404);
     await respuesta.json();

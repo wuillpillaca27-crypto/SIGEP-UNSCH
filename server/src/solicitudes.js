@@ -2,6 +2,7 @@ const { randomUUID } = require("node:crypto");
 const { mkdir, unlink, writeFile } = require("node:fs/promises");
 const { resolve } = require("node:path");
 const express = require("express");
+const { programasVisibles, requisitosVisibles } = require("./datos-demostracion");
 
 const tipoPorPrograma = {
   maestria: "grado_maestro",
@@ -15,11 +16,19 @@ const certificacionesPorPrograma = {
   diplomado: { clave: "diplomados", nombre: "Diplomados de Posgrado" },
   certificacion_modulos: { clave: "modulos", nombre: "Certificaciones por Módulos" },
 };
+const tramitesPorPrograma = {
+  maestria: { clave: "maestro", nombre: "Grado de Maestro" },
+  doctorado: { clave: "doctor", nombre: "Grado de Doctor" },
+  segunda_especialidad: { clave: "segunda-especialidad", nombre: "Título de Segunda Especialidad" },
+  ...certificacionesPorPrograma,
+};
 const tiposCertificacion = ["certificado_diplomado", "certificacion_modulos"];
-const filtroPlantillasActivas = (programaId, tipoTramite) => ({ programaId, tipoTramite, activo: true });
+const filtroPlantillasActivas = (programaId, tipoTramite) => ({
+  programaId, tipoTramite, activo: true, ...requisitosVisibles(), programa: programasVisibles(),
+});
 
 async function puedeEditarBorrador(db, estudiante, solicitud) {
-  if (solicitud.estado !== "borrador" || !tiposCertificacion.includes(solicitud.tipoTramite)) return true;
+  if (solicitud.estado !== "borrador") return true;
   const programa = estudiante.programa;
   if (!programa.activo || solicitud.programa.id !== programa.id ||
       tipoPorPrograma[programa.tipo] !== solicitud.tipoTramite) return false;
@@ -52,37 +61,27 @@ const detalle = {
 function registrarSolicitudes(app, prisma, autenticar, directorio) {
   const router = express.Router();
   app.use("/api/solicitudes", autenticar, router);
-  router.get("/opciones-certificacion", async (req, res) => {
+  router.get(["/opciones", "/opciones-certificacion"], async (req, res) => {
     if (req.usuario.rol !== "estudiante") return res.status(403).json({ error: "El trámite requiere una cuenta de estudiante" });
-    const estudiante = await prisma.estudiante.findUnique({
-      where: { usuarioId: req.usuario.id },
-      select: {
-        programa: {
-          select: {
-            id: true, nombre: true, tipo: true, activo: true,
-            plantillasRequisito: {
-              where: { activo: true, tipoTramite: { in: tiposCertificacion } },
-              select: { id: true, nombre: true, descripcion: true, tipo: true, obligatorio: true, versionNorm: true, tipoTramite: true },
-              orderBy: [{ orden: "asc" }, { id: "asc" }],
-            },
-          },
-        },
-      },
-    });
+    const soloCertificaciones = /^\/opciones-certificacion\/?$/i.test(req.path);
+    const estudiante = req.usuario.estudiante;
     if (!estudiante) return res.json({ programas: [], programaRegistrado: null, motivo: "sin_matricula" });
     const programa = estudiante.programa;
     const programaRegistrado = { id: programa.id, nombre: programa.nombre, tipo: programa.tipo, activo: programa.activo };
     if (!programa.activo) return res.json({ programas: [], programaRegistrado, motivo: "programa_inactivo" });
     const tipoTramite = tipoPorPrograma[programa.tipo];
-    const datosCertificacion = certificacionesPorPrograma[programa.tipo];
-    if (!datosCertificacion || !tiposCertificacion.includes(tipoTramite)) {
+    if (soloCertificaciones && !tiposCertificacion.includes(tipoTramite)) {
       return res.json({ programas: [], programaRegistrado, motivo: "tipo_no_certificable" });
     }
-    const requisitos = programa.plantillasRequisito.filter((requisito) => requisito.tipoTramite === tipoTramite)
-      .map(({ tipoTramite: _tipoTramite, ...requisito }) => requisito);
+    const requisitos = await prisma.plantillaRequisito.findMany({
+      where: filtroPlantillasActivas(programa.id, tipoTramite),
+      select: { id: true, nombre: true, descripcion: true, tipo: true, obligatorio: true, versionNorm: true },
+      orderBy: [{ orden: "asc" }, { id: "asc" }],
+    });
     if (!requisitos.length) return res.json({ programas: [], programaRegistrado, motivo: "sin_requisitos_activos" });
+    const opciones = [{ ...tramitesPorPrograma[programa.tipo], tipoTramite, requisitos }];
     return res.json({
-      programas: [{ ...programaRegistrado, certificaciones: [{ ...datosCertificacion, tipoTramite, requisitos }] }],
+      programas: [{ ...programaRegistrado, [soloCertificaciones ? "certificaciones" : "tramites"]: opciones }],
       programaRegistrado,
       motivo: null,
     });
@@ -122,7 +121,11 @@ function registrarSolicitudes(app, prisma, autenticar, directorio) {
     }
     const resultado = await prisma.$transaction(async (db) => {
       const datos = { usuarioId: req.usuario.id, estudianteId: estudiante.id, programaId: estudiante.programa.id, tipoTramite };
-      const existente = await db.solicitud.findFirst({ where: { ...datos, estado: "borrador" }, select: detalle });
+      // Serializa la creación de borradores para el mismo estudiante en PostgreSQL.
+      await db.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(hashtext('sigep.solicitudes'), ${estudiante.id}::integer)`;
+      const existente = await db.solicitud.findFirst({
+        where: { ...datos, estado: "borrador" }, orderBy: [{ actualizadoEn: "desc" }, { id: "desc" }], select: detalle,
+      });
       if (existente) return await puedeEditarBorrador(db, estudiante, existente) ? existente : null;
       const plantillas = await db.plantillaRequisito.findMany({
         where: filtroPlantillasActivas(datos.programaId, tipoTramite), select: { id: true },
@@ -150,7 +153,7 @@ function registrarSolicitudes(app, prisma, autenticar, directorio) {
         return { status: 409, error: "La solicitud no está lista para presentar" };
       }
       if (!await puedeEditarBorrador(db, req.usuario.estudiante, solicitud)) {
-        return { status: 409, error: "La certificación ya no está habilitada para tu matrícula" };
+        return { status: 409, error: "El trámite ya no está habilitado para tu matrícula" };
       }
       const documentos = new Set(solicitud.documentos.map((item) => item.tipoDoc));
       const pendiente = solicitud.validaciones.some(({ estado, plantilla }) =>
@@ -182,7 +185,7 @@ function registrarSolicitudes(app, prisma, autenticar, directorio) {
     const solicitud = await encontrar(prisma, req);
     if (!solicitud) return res.status(404).json({ error: "Solicitud no encontrada" });
     if (!await puedeEditarBorrador(prisma, req.usuario.estudiante, solicitud)) {
-      return res.status(409).json({ error: "La certificación ya no está habilitada para tu matrícula" });
+      return res.status(409).json({ error: "El trámite ya no está habilitado para tu matrícula" });
     }
     const requisito = solicitud.validaciones.find(({ plantilla }) =>
       String(plantilla.id) === req.params.plantilla && plantilla.tipo === "documental"

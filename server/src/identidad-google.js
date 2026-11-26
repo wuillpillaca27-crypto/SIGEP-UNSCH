@@ -6,6 +6,14 @@ const nombreCookie = "sigep_google";
 const audiencia = "sigep-google-transaccion";
 const random = () => randomBytes(32).toString("base64url");
 
+function retornoSolicitud(valor, origen) {
+  if (typeof valor !== "string" || valor.length > 1024 || !valor.startsWith("/") ||
+      valor.startsWith("//") || /[\\\x00-\x20]/.test(valor)) return undefined;
+  const url = new URL(valor, origen);
+  if (!/^\/(?:grados-titulos|certificaciones)\/iniciar-solicitud\/?$/.test(url.pathname)) return undefined;
+  return url.pathname + url.search + url.hash;
+}
+
 function cargarConfiguracion(env) {
   const { SIGEP_GOOGLE_CLIENT_ID: clientId, SIGEP_GOOGLE_CLIENT_SECRET: clientSecret, SIGEP_GOOGLE_REDIRECT_URI: uri,
     SIGEP_GOOGLE_VINCULOS: archivo, SIGEP_GOOGLE_DOMINIOS: dominios } = env;
@@ -33,13 +41,14 @@ function registrarGoogle(app, { prisma, secreto, perfil, opcionesCookie, leerCoo
   const config = secreto ? cargarConfiguracion(process.env) : null;
   app.get("/api/auth/google/estado", (_req, res) => res.set("Cache-Control", "no-store").json({ habilitado: Boolean(config) }));
 
-  app.get("/api/auth/google/iniciar", async (_req, res) => {
+  app.get("/api/auth/google/iniciar", async (req, res) => {
     res.set("Cache-Control", "no-store");
     if (!config) return res.status(503).json({ error: "Google no está configurado." });
     const state = random();
     const nonce = random();
     const { codeVerifier, codeChallenge } = await config.cliente.generateCodeVerifierAsync();
-    const transaccion = jwt.sign({ state, nonce, codeVerifier }, secreto, { algorithm: "HS256", audience: audiencia, expiresIn: "5m" });
+    const continuar = retornoSolicitud(req.query.continuar, config.redirect);
+    const transaccion = jwt.sign({ state, nonce, codeVerifier, continuar }, secreto, { algorithm: "HS256", audience: audiencia, expiresIn: "5m" });
     res.cookie(nombreCookie, transaccion, { ...opcionesCookie, maxAge: 300_000 });
     return res.redirect(config.cliente.generateAuthUrl({
       scope: ["openid", "email"], state, nonce, code_challenge: codeChallenge, code_challenge_method: "S256",
@@ -51,10 +60,12 @@ function registrarGoogle(app, { prisma, secreto, perfil, opcionesCookie, leerCoo
     res.set("Cache-Control", "no-store");
     if (!config) return res.status(503).json({ error: "Google no está configurado." });
     res.clearCookie(nombreCookie, opcionesCookie);
+    let continuar;
     try {
       const tx = jwt.verify(leerCookie(req, nombreCookie), secreto, { algorithms: ["HS256"], audience: audiencia });
       if (typeof req.query.state !== "string" || !/^[\w-]{43}$/.test(req.query.state) ||
           !timingSafeEqual(Buffer.from(tx.state), Buffer.from(req.query.state)) || typeof req.query.code !== "string") throw Error();
+      continuar = retornoSolicitud(tx.continuar, config.redirect);
       const { tokens } = await config.cliente.getToken({ code: req.query.code, codeVerifier: tx.codeVerifier });
       const identidad = (await config.cliente.verifyIdToken({ idToken: tokens.id_token, audience: config.clientId })).getPayload();
       const email = identidad?.email?.toLowerCase();
@@ -62,13 +73,15 @@ function registrarGoogle(app, { prisma, secreto, perfil, opcionesCookie, leerCoo
           (config.dominios.size && !config.dominios.has(identidad.hd?.toLowerCase()))) throw Error();
       const usuario = await prisma.usuario.findFirst({ where: { email, activo: true }, select: perfil });
       const personal = usuario && ["administrador", "operador"].includes(usuario.rol);
-      if (!usuario || (!personal && (usuario.rol !== "estudiante" || !usuario.estudiante))) throw Error();
+      if (!usuario || (!personal && (usuario.rol !== "estudiante" || (!usuario.estudiante && !continuar)))) throw Error();
       iniciarSesion(res, usuario);
       console.info("SIGEP auth: acceso por Google", usuario.id);
-      return res.redirect(new URL(personal ? "/admin" : "/mis-tramites", config.redirect).href);
+      return res.redirect(new URL(personal ? "/admin" : continuar ?? "/mis-tramites", config.redirect).href);
     } catch {
       console.info("SIGEP auth: acceso por Google rechazado");
-      return res.redirect(new URL("/login?google=error", config.redirect).href);
+      const login = new URL("/login?google=error", config.redirect);
+      if (continuar) login.searchParams.set("continuar", continuar);
+      return res.redirect(login.href);
     }
   });
 }

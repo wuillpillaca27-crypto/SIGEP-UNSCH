@@ -12,8 +12,10 @@ type Catalogo = {
   requisitos: Requisito[];
   costos?: string;
   plazos?: string;
+  procedimiento?: string;
   observaciones?: string;
   fuente?: string;
+  demostracion?: boolean;
 };
 type Resultado<T> = { clave: string; datos?: T; error?: string };
 
@@ -91,6 +93,7 @@ export default function Orientacion({ inicial, seccion, programasDestacados }: {
         <div className={styles.acciones}>
           <Link href={`${base}/iniciar-solicitud?tramite=${tramite}`}>Iniciar solicitud</Link>
           <a href="#requisitos">{programasDestacados ? "Ver programas" : "Ver requisitos"}</a>
+          <Link href="/verificar-documento">Verificar documento</Link>
         </div>
       </header>
       <div className={styles.tarjetas}>
@@ -140,6 +143,7 @@ export default function Orientacion({ inicial, seccion, programasDestacados }: {
           </label>
         </div>
         <div role="status">
+          {detalle?.datos?.demostracion && <p>Datos de demostración para el entorno de desarrollo.</p>}
           {!programasVisibles && <p>Consultando programas…</p>}
           {programasVisibles?.error && <p>{programasVisibles.error} Puedes volver a intentar recargando la página.</p>}
           {programasVisibles?.datos?.length === 0 && <p>No hay programas publicados para este trámite.</p>}
@@ -152,6 +156,7 @@ export default function Orientacion({ inicial, seccion, programasDestacados }: {
         <Lista items={requisitos?.filter((item) => item.tipo === "documental")} />
         {!requisitos?.some((item) => item.tipo === "documental") && <p>No hay documentos para mostrar en la selección actual.</p>}
         <dl className={styles.datos}>
+          <div><dt>Procedimiento oficial</dt><dd>{detalle?.datos?.procedimiento ?? "Sin información oficial disponible."}</dd></div>
           <div><dt>Costos autorizados</dt><dd>{detalle?.datos?.costos ?? "Sin información oficial disponible."}</dd></div>
           <div><dt>Plazos oficiales</dt><dd>{detalle?.datos?.plazos ?? "Sin información oficial disponible."}</dd></div>
           {detalle?.datos?.observaciones && <div><dt>Observaciones</dt><dd>{detalle.datos.observaciones}</dd></div>}

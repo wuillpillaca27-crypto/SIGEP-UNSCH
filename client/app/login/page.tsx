@@ -89,15 +89,16 @@ function Ingreso() {
       }
       const { usuario: perfil } = respuesta.datos;
       const personal = ["administrador", "operador"].includes(perfil.rol);
-      if (!personal && !(perfil.rol === "estudiante" && perfil.estudiante)) {
+      const solicitado = parametros.get("continuar") ?? "";
+      const destino = solicitado.startsWith("/") && !solicitado.startsWith("//") && !/[\\\x00-\x20]/.test(solicitado)
+        ? new URL(solicitado, location.origin) : null;
+      const solicitudAcademica = destino && /^\/(?:grados-titulos|certificaciones)\/iniciar-solicitud\/?$/.test(destino.pathname);
+      if (!personal && !(perfil.rol === "estudiante" && (perfil.estudiante || solicitudAcademica))) {
         await solicitudes.cerrarSesion();
         setError("Esta cuenta no tiene acceso a trámites de estudiante ni al panel.");
         return;
       }
-      const solicitado = parametros.get("continuar") ?? "";
       const permitido = personal ? /^\/admin(?:\/|$)/ : /^\/(?:mis-tramites|grados-titulos\/iniciar-solicitud|certificaciones\/iniciar-solicitud)(?:\/|$)/;
-      const destino = solicitado.startsWith("/") && !solicitado.startsWith("//") && !/[\\\x00-\x20]/.test(solicitado)
-        ? new URL(solicitado, location.origin) : null;
       window.location.replace(destino && permitido.test(destino.pathname)
         ? destino.pathname + destino.search + destino.hash : personal ? "/admin" : "/mis-tramites");
     } finally {
@@ -157,7 +158,7 @@ function Ingreso() {
         </form>
         <p className={styles.separador}>o también puedes ingresar con</p>
         {google && !ocupado
-          ? <a className={styles.google} href={API_URL + "/auth/google/iniciar"}><Google />Continuar con Google</a>
+          ? <a className={styles.google} href={`${API_URL}/auth/google/iniciar?${new URLSearchParams({ continuar: parametros.get("continuar") ?? "" })}`}><Google />Continuar con Google</a>
           : <button type="button" className={styles.google} disabled><Google />Continuar con Google</button>}
         {google === false && <p className={styles.estadoGoogle}>Google aún no está habilitado en este entorno.</p>}
         <footer className={styles.pie}>

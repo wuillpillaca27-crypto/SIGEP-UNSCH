@@ -30,14 +30,13 @@ async function Contenido({
       </nav>
       <header className={styles.hero}>
         <SelloPosgrado />
-        <h1 className="serif">Iniciar solicitud</h1>
-        {seleccion && <p>{tramites[seleccion].nombre}</p>}
+        <h1 className="serif">{seleccion ? `Solicitud de ${tramites[seleccion].nombre}` : "Iniciar solicitud"}</h1>
         <div className={styles.acciones}>
-          <Link href="/grados-titulos/requisitos">Consultar requisitos</Link>
+          <Link href={seleccion ? `/grados-titulos/${seleccion}#requisitos` : "/grados-titulos/requisitos"}>Consultar requisitos</Link>
           <Link href="/ayuda">Solicitar orientación</Link>
         </div>
       </header>
-      <Asistente seleccion={seleccion} />
+      <Asistente key={seleccion ?? "grados-titulos"} seleccion={seleccion} />
     </main>
   );
 }
