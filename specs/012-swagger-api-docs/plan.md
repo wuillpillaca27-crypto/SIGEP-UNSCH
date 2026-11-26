@@ -16,7 +16,7 @@ Documentar las operaciones HTTP del inventario FR-016 de Spec 008 mediante OpenA
 **Tipo de proyecto**: API web Express CommonJS.  
 **Objetivo de rendimiento**: Sin objetivo adicional; la documentación debe estar disponible en el arranque normal del servidor.  
 **Restricciones**: No alterar handlers, autenticación, permisos, validaciones, persistencia, transiciones ni respuestas de negocio. Documentar los métodos y rutas de FR-016; no afirmar detalles sin fuente. No incluir secretos. Mantener dependencias y lockfile coherentes.  
-**Escala/alcance**: 19 operaciones HTTP según FR-016 de `specs/008-documentacion-arquitectura/spec.md`; una ruta Swagger UI y un documento OpenAPI.
+**Escala/alcance**: 28 operaciones HTTP (método + ruta) según FR-016 de `specs/008-documentacion-arquitectura/spec.md`; una ruta Swagger UI y un documento OpenAPI.
 
 ## Revisión de constitución
 

@@ -17,4 +17,4 @@ Esta funcionalidad no introduce tablas, persistencia ni entidades de dominio. Su
 
 ## Catálogo de operaciones
 
-Las rutas canónicas están definidas en [FR-016 de Spec 008](../008-documentacion-arquitectura/spec.md). La implementación cotejará el inventario con los registradores: catálogo de grados, identidad, identidad Google, solicitudes, revisión de grados, administración y verificación QR. No se duplican aquí las 19 operaciones para evitar divergencia con la fuente autoritativa.
+Las rutas canónicas están definidas en [FR-016 de Spec 008](../008-documentacion-arquitectura/spec.md) y la lista cotejada de sus 28 operaciones (método + ruta) está en [el contrato OpenAPI](contracts/openapi.md). El conteo anterior de 19 operaciones era incorrecto.

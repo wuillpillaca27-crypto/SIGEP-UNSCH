@@ -21,7 +21,7 @@ description: "Lista de tareas para publicar Swagger UI y documentar las rutas ac
 
 **Propósito**: Cotejar la lista contractual de operaciones antes de redactar el documento OpenAPI.
 
-- [ ] T002 [P] Cotejar método, prefijo y ruta de cada operación FR-016 de `specs/008-documentacion-arquitectura/spec.md` con los registradores `server/src/catalogo-grados.js`, `server/src/identidad.js`, `server/src/identidad-google.js`, `server/src/solicitudes.js`, `server/src/revision-grados.js`, `server/src/administracion.js` y `server/src/verificacion-documentos.js`; resolver cualquier discrepancia en favor del código actual y registrar la correspondencia en `specs/012-swagger-api-docs/contracts/openapi.md`.
+- [X] T002 [P] Cotejar método, prefijo y ruta de cada operación FR-016 de `specs/008-documentacion-arquitectura/spec.md` con los registradores `server/src/catalogo-grados.js`, `server/src/identidad.js`, `server/src/identidad-google.js`, `server/src/solicitudes.js`, `server/src/revision-grados.js`, `server/src/administracion.js` y `server/src/verificacion-documentos.js`; resolver cualquier discrepancia en favor del código actual y registrar la correspondencia en `specs/012-swagger-api-docs/contracts/openapi.md`.
 
 **Checkpoint**: Inventario de rutas verificado; la especificación OpenAPI puede elaborarse con fuentes trazables.
 
