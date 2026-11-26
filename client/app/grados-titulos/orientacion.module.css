@@ -1,0 +1,137 @@
+.pagina {
+  --panel: #fff;
+  --tinta: #25242a;
+  --borde: #e4dce0;
+  display: grid;
+  gap: 14px;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 18px clamp(12px, 3vw, 32px) 40px;
+  color: var(--tinta);
+}
+
+:global(.tema-oscuro) .pagina {
+  --panel: #24252a;
+  --tinta: #f0edef;
+  --borde: #525159;
+}
+
+.ruta, .acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.ruta { gap: 5px; font-size: .82rem; }
+.pagina a { color: inherit; text-underline-offset: 3px; }
+
+.hero {
+  padding: clamp(16px, 3vw, 30px);
+  color: #fff;
+  background: #501e28;
+  border-radius: 14px;
+}
+.sello { display: flex; gap: 8px; align-items: center; color: #f3cd68; font-size: .78rem; font-weight: 750; text-transform: uppercase; }
+.hero h1 { margin: 10px 0 8px; font-size: clamp(1.38rem, 3vw, 2.35rem); line-height: 1.14; font-family: inherit; }
+.hero p { max-width: 70ch; margin: 0 0 13px; }
+.acciones a {
+  display: inline-block;
+  padding: 9px 13px;
+  border: 1px solid #bea0a5;
+  border-radius: 5px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.acciones a:first-child { background: #b71d34; border-color: #b71d34; color: #fff; }
+.acciones a:hover { filter: brightness(1.15); }
+.campos, .etapas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 205px), 1fr));
+  gap: 14px;
+}
+.tarjetas { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; }
+.tarjeta {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 4px;
+  min-height: 84px;
+  padding: 8px 4px;
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  background: var(--panel);
+  text-align: center;
+  text-decoration: none;
+  font-size: clamp(.78rem, 2vw, .96rem);
+}
+.tarjeta:hover { border-color: #b71d34; }
+.tarjeta svg { color: #9f1831; }
+.tarjeta span { font-size: .76rem; }
+.recorrido {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  text-align: center;
+}
+.recorrido li { min-width: 0; overflow-wrap: anywhere; font-size: .85rem; }
+.recorrido span { display: grid; place-items: center; width: 32px; height: 32px; margin: 0 auto 4px; border-radius: 50%; background: #f4e6e9; color: #8b1830; font-weight: 750; }
+.recorrido p { margin: 5px auto 0; max-width: 27ch; font-size: .8rem; }
+@media (max-width: 600px) {
+  .recorrido p { display: none; }
+  .recorrido { gap: 4px; }
+  .recorrido li { font-size: clamp(.65rem, 3vw, .8rem); }
+}
+.panel {
+  min-width: 0;
+  padding: clamp(16px, 3vw, 24px);
+  background: var(--panel);
+  border: 1px solid var(--borde);
+  border-radius: 9px;
+  box-shadow: 0 4px 15px rgb(29 16 21 / 7%);
+}
+.panel h2 { margin: 0 0 10px; font-size: 1.25rem; }
+.panel p { line-height: 1.5; }
+.panel[id], .panel [id] { scroll-margin-top: 96px; }
+.campos label { display: grid; gap: 7px; font-weight: 700; }
+.campos input, .campos select {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  border: 1px solid var(--borde);
+  border-radius: 5px;
+  padding: 7px;
+  color: inherit;
+  background: var(--panel);
+  font: inherit;
+}
+.lista, .etapas { padding-left: 25px; }
+.lista li, .etapas li { padding: 10px 4px; }
+.lista li + li, .panel details + details { border-top: 1px solid var(--borde); }
+.etapas li::marker { color: #a77615; font-weight: 700; }
+.datos { display: flex; flex-wrap: wrap; gap: 18px 28px; }
+.datos dt { font-weight: 700; }
+.datos dd { margin: 5px 0 0; }
+.panel summary { padding-block: 10px; cursor: pointer; font-weight: 700; }
+.pagina :focus-visible { outline: 2px solid #a77615; outline-offset: 3px; }
+.formulario { display: grid; gap: 14px; max-width: 530px; }
+.formulario label { display: grid; gap: 6px; }
+.formulario input {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--borde);
+  border-radius: 5px;
+  padding: 8px;
+  color: inherit;
+  background: var(--panel);
+  font: inherit;
+}
+.panel button {
+  width: fit-content;
+  border: 1px solid #651822;
+  border-radius: 5px;
+  padding: 8px 12px;
+  color: #fff;
+  background: #651822;
+  cursor: pointer;
+}
+.panel button:disabled { opacity: .6; cursor: wait; }
+.controles { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+.etapas li[aria-current="step"] { font-weight: 700; text-decoration: underline; text-underline-offset: 4px; }

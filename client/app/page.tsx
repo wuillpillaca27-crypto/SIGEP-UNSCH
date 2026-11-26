@@ -1,69 +1,103 @@
+"use client";
 import Image from "next/image";
+import { useEffect, useState } from "react";
+import AccesibilidadWidget from "./components/AccesibilidadWidget";
+import NavbarPublica from "./components/NavbarPublica";
+import PortalAcademico from "./components/PortalAcademico";
 
 export default function Home() {
+  const [oscuro, setOscuro] = useState(false);
+  const [mostrarVolverArriba, setMostrarVolverArriba] = useState(false);
+
+  useEffect(() => {
+    const guardado = localStorage.getItem("sigep-tema");
+    if (guardado === "oscuro") setOscuro(true);
+  }, []);
+
+  useEffect(() => {
+    const actualizarBoton = () => setMostrarVolverArriba(window.scrollY > 320);
+    window.addEventListener("scroll", actualizarBoton, { passive: true });
+    actualizarBoton();
+    return () => window.removeEventListener("scroll", actualizarBoton);
+  }, []);
+
+  function toggleTema() {
+    setOscuro((prev) => {
+      const nuevo = !prev;
+      localStorage.setItem("sigep-tema", nuevo ? "oscuro" : "claro");
+      return nuevo;
+    });
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className={`pagina-inicio ${oscuro ? "tema-oscuro" : ""}`}>
+
+      {/* ── Header con nueva navbar ─────────────────── */}
+      <NavbarPublica />
+
+      {/* ── Hero ───────────────────────────────────── */}
+      <section className="hero">
+        <div className="hero-institution" aria-label="Escuela de Posgrado">
+          <Image
+            src="/escudo-unsch.png"
+            alt="Escudo de la UNSCH"
+            width={92}
+            height={120}
+          />
+          <span>ESCUELA DE<br /><strong>POSGRADO</strong></span>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <div className="hero-tag">SISTEMA INSTITUCIONAL</div>
+        <h1 className="serif">
+          Gestión de procesos académicos y administrativos
+        </h1>
+        <div className="hero-line" />
+        <p>
+          Inicie, siga y consulte el estado de sus solicitudes con sus
+          credenciales institucionales.
+        </p>
+        <aside className="social-bar" aria-label="Redes sociales">
+          <a className="social-link facebook"   href="#" aria-label="Facebook"  title="Facebook">f</a>
+          <a className="social-link youtube"    href="#" aria-label="YouTube"   title="YouTube">▶</a>
+          <a className="social-link instagram"  href="#" aria-label="Instagram" title="Instagram">◎</a>
+          <a className="social-link tiktok"     href="#" aria-label="TikTok"    title="TikTok">♪</a>
+          <a className="social-link linkedin"   href="#" aria-label="LinkedIn"  title="LinkedIn">in</a>
+        </aside>
+        <button
+          className={`back-to-top ${mostrarVolverArriba ? "back-to-top-visible" : ""}`}
+          type="button"
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          aria-label="Volver arriba"
+          title="Volver arriba"
+        >
+          ↑
+        </button>
+        <div className="btns">
+          <a className="btn btn-rojo" href="/login">INICIAR SESIÓN</a>
+          <a className="btn btn-borde" href="/verificar-documento">CONSULTAR MI TRÁMITE</a>
         </div>
-      </main>
+      </section>
+
+      <section className="rector-section" aria-label="Autoridades universitarias" style={{ padding: 0 }}>
+        <a
+          href="/banner-institucional-posgrado.png"
+          target="_blank"
+          rel="noopener"
+          title="Ver el banner a tamaño original"
+          style={{ display: "block" }}
+        >
+          <Image
+            src="/banner-institucional-posgrado.png"
+            alt="Escuela de Posgrado de la UNSCH. El director, Dr. Johnny Aldo Tinco Jayo, da la bienvenida a los estudiantes. A la derecha, el rector, Dr. Emilio Ramírez Roca."
+            width={2172}
+            height={724}
+            sizes="100vw"
+            style={{ display: "block", width: "100%", height: "auto", objectFit: "contain" }}
+          />
+        </a>
+      </section>
+
+      <PortalAcademico oscuro={oscuro} cambiarTema={toggleTema} />
+      <AccesibilidadWidget />
     </div>
   );
 }
