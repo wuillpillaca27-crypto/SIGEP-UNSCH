@@ -21,10 +21,10 @@ flowchart LR
     Administracion["Administración (FR-003 de specs/003; administracion.js)"]
     Catalogo["Catálogo de grados (specs/001; catalogo-grados.js)"]
     Verificacion["Verificación pública (FR-001-004 de specs/002; verificacion-documentos.js)"]
-    Prisma["Prisma Client / adaptador libSQL (RF-DOC-001-003; server/src/index.js)"]
+    Prisma["Prisma Client / adaptador PrismaPg (RF-DOC-001-003; server/src/index.js)"]
   end
 
-  SQLite[("SQLite local (RF-DOC-001-003; server/prisma/schema.prisma)")]
+  PostgreSQL[("PostgreSQL (RF-DOC-001-003; server/prisma/schema.prisma)")]
   Google["Google OAuth externo (FR-005 de specs/004; identidad-google.js)"]
 
   Paginas --> UI
@@ -44,7 +44,7 @@ flowchart LR
   Administracion --> Prisma
   Catalogo --> Prisma
   Verificacion --> Prisma
-  Prisma --> SQLite
+  Prisma --> PostgreSQL
 ```
 
 ### Catálogo de trazabilidad de nodos
@@ -60,7 +60,7 @@ flowchart LR
 | Administración | FR-003/FR-004 de `specs/003`. | `server/src/administracion.js`. |
 | Catálogo | Necesidad de iniciar/consultar trámites en `specs/001`. | `server/src/catalogo-grados.js`. |
 | Verificación | FR-001–FR-004 de `specs/002`. | `server/src/verificacion-documentos.js`. |
-| Prisma/adaptador y SQLite | RF-DOC-001–003, operaciones persistentes. | `server/src/index.js`, `server/prisma/schema.prisma`, `server/package.json`. |
+| Prisma/adaptador y PostgreSQL | RF-DOC-001–003, operaciones persistentes. | `server/src/index.js`, `server/prisma.config.ts`, `server/prisma/schema.prisma`, `server/package.json`. |
 | Google OAuth externo | FR-005 de `specs/004`. | `server/src/identidad-google.js`, dependencia en `server/package.json`. |
 
 Las flechas API representan rutas y llamadas verificables; la dirección entre identidad y routers autenticados refleja el middleware `autenticar` que se pasa al registrarlos. No se dibujan módulos vacíos como componentes.

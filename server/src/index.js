@@ -1,13 +1,12 @@
 require("dotenv").config();
 const { resolve } = require("node:path");
 const { readFileSync } = require("node:fs");
-const { pathToFileURL } = require("node:url");
 const cors = require("cors");
 const express = require("express");
 const swaggerUi = require("swagger-ui-express");
 const openapi = require("../openapi.json");
 const { PrismaClient } = require("@prisma/client");
-const { PrismaLibSql } = require("@prisma/adapter-libsql");
+const { PrismaPg } = require("@prisma/adapter-pg");
 const { leerNormativa, registrarCatalogo } = require("./catalogo-grados");
 const { registrarIdentidad } = require("./identidad");
 const { registrarSolicitudes } = require("./solicitudes");
@@ -16,13 +15,11 @@ const { registrarVerificacion } = require("./verificacion-documentos");
 const { registrarAdministracion } = require("./administracion");
 
 const url = process.env.DATABASE_URL;
-if (!url?.startsWith("file:")) {
-  throw new Error("DATABASE_URL debe señalar la base SQLite configurada para SIGEP.");
+if (!url?.startsWith("postgresql://")) {
+  throw new Error("DATABASE_URL debe usar el esquema postgresql://.");
 }
 
-const ubicacion = url.slice("file:".length);
-const databaseUrl = url.startsWith("file://") ? url : pathToFileURL(resolve(ubicacion)).href;
-const prisma = new PrismaClient({ adapter: new PrismaLibSql({ url: databaseUrl }) });
+const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: url }) });
 const app = express();
 const origenes = (process.env.CLIENT_ORIGINS ?? "http://localhost:3000,http://127.0.0.1:3000").split(",").map((valor) => valor.trim());
 

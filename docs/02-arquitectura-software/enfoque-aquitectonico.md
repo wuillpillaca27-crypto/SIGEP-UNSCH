@@ -16,7 +16,7 @@ El cliente tiene aplicación Next.js/React bajo `client/app/` y el servidor crea
 
 ### Persistencia y límites de confianza
 
-Prisma Client accede a SQLite local mediante adaptador libSQL. Los módulos autenticados usan sesión creada por identidad y aplican comprobaciones específicas de rol/titularidad. La ruta pública de verificación devuelve una proyección acotada para documentos emitidos. Los archivos se sirven a través de endpoints que consultan solicitud/documento y comprueban la ruta interna.
+Prisma Client accede a PostgreSQL mediante `PrismaPg`. Los módulos autenticados usan sesión creada por identidad y aplican comprobaciones específicas de rol/titularidad. La ruta pública de verificación devuelve una proyección acotada para documentos emitidos. Los archivos se sirven a través de endpoints que consultan solicitud/documento y comprueban la ruta interna. La transferencia SQLite se realiza con un proceso explícito, después del respaldo y su ensayo sin escritura; no se ejecuta al arrancar la API.
 
 ### Trazabilidad de operaciones
 

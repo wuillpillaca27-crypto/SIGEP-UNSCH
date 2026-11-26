@@ -32,6 +32,10 @@ Las rutas siguientes están declaradas por el servidor. Los prefijos se componen
 | GET `/api/administracion/auditoria` | `server/src/administracion.js` | Consulta paginada de auditoría (solo admin). |
 | GET `/api/documentos/verificar-qr/:codigo` | `server/src/verificacion-documentos.js` | Consulta pública de un documento en estado emitido; no devuelve datos personales ni archivo. |
 
+### Persistencia implementada
+
+El servidor usa PostgreSQL mediante Prisma 7 y `PrismaPg`; `DATABASE_URL` se obtiene con `prisma.config.ts`, y el arranque solo acepta `postgresql://`. El esquema conserva diez modelos/tablas y ocho enums. El origen SQLite documentado por Spec 011 es una fuente de migración separada; no hay fallback del runtime a `file:` ni se importan sus datos al arrancar. La ruta de inicialización aplica únicamente migraciones versionadas.
+
 ### Requisitos heredados OpenSpec
 
 Se conservan literalmente los identificadores y alcance de `docs/legacy/openspec/requirements.md`:
@@ -66,5 +70,6 @@ Capas separadas, caché y Swagger aparecen en antecedentes/propuestas del proyec
 - Especificaciones: `specs/001-mis-tramites/spec.md` a `specs/007-pruebas-frontend/spec.md`.
 - Rutas y comportamiento: los ocho módulos indicados en la tabla, todos bajo `server/src/`.
 - Datos/configuración: `server/prisma/schema.prisma`, `server/src/index.js`.
+- Configuración, proveedor y despliegue de esquema: `server/prisma.config.ts`, `server/scripts/inicializar-base.js`, `server/prisma/migrations/` y `specs/011-migrar-postgresql/`.
 - Cliente: páginas y componentes bajo `client/app/`.
 - Legado: `docs/legacy/openspec/requirements.md`, `api-contracts.md`, `data-models.md`.

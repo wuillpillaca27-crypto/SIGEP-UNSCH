@@ -2,7 +2,7 @@
 
 ## Resumen
 
-La arquitectura implementada hoy es una aplicación web con un cliente Next.js y una API Express. El servidor se ejecuta como un proceso monolítico que conecta módulos registradores, Prisma y una base SQLite local mediante libSQL. El documento presenta la estructura observada en el repositorio; no presupone el despliegue productivo.
+La arquitectura implementada hoy es una aplicación web con un cliente Next.js y una API Express. El servidor se ejecuta como un proceso monolítico que conecta módulos registradores, Prisma y PostgreSQL mediante el adaptador PrismaPg. El documento presenta la estructura observada en el repositorio; no presupone el despliegue productivo.
 
 ## Implementado hoy
 
@@ -14,7 +14,7 @@ La arquitectura implementada hoy es una aplicación web con un cliente Next.js y
 
 `server/src/index.js` configura una instancia Express, CORS, control de origen para solicitudes de escritura, parser JSON con límite y manejo de errores. Importa y registra módulos funcionales que se encuentran directamente en `server/src/`. Los módulos registran rutas HTTP y, según el caso, validan permisos y consultan Prisma dentro del mismo archivo. La autenticación local produce el middleware utilizado en rutas protegidas.
 
-El esquema `server/prisma/schema.prisma` configura `provider = "sqlite"`. En el arranque se requiere una variable `DATABASE_URL` con prefijo `file:` y se instancia Prisma con `PrismaLibSql` (`@prisma/adapter-libsql`). Por tanto, la base documentada es SQLite local con adaptador libSQL; no PostgreSQL.
+El esquema `server/prisma/schema.prisma` configura `provider = "postgresql"`. Prisma 7 obtiene `DATABASE_URL` desde `server/prisma.config.ts`; el arranque rechaza URL ausente o distinta del prefijo `postgresql://` y configura `PrismaPg` (`@prisma/adapter-pg`) con el driver `pg`. No existe fallback a SQLite/libSQL. La inicialización ejecuta `prisma migrate deploy`; importar datos desde SQLite es un paso separado y no se activa durante el arranque.
 
 El esquema contiene usuarios y estudiantes, programas, plantillas y validaciones de requisitos, solicitudes, documentos, revisiones, historial de estados y auditoría. Estas entidades describen el modelo; una entidad aislada no prueba que todos sus flujos estén activos.
 

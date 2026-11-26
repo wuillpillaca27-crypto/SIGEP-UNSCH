@@ -17,9 +17,9 @@ flowchart TD
   Revision["registrarRevision (FR-002; server/src/revision-grados.js)"]
   Administracion["registrarAdministracion (FR-003; server/src/administracion.js)"]
   Verificacion["registrarVerificacion (FR-001-004; server/src/verificacion-documentos.js)"]
-  Prisma["PrismaClient + PrismaLibSql (RF-DOC-001-003; server/src/index.js)"]
+  Prisma["PrismaClient + PrismaPg (RF-DOC-001-003; server/src/index.js)"]
   Modelo["Modelos Usuario, Solicitud, DocumentoSolicitud, Auditoria (RF-DOC-001-003; server/prisma/schema.prisma)"]
-  Sqlite[("provider sqlite / URL file: (server/prisma/schema.prisma, server/src/index.js)")]
+  Postgres[("provider postgresql / DATABASE_URL (server/prisma/schema.prisma, server/prisma.config.ts)")]
 
   Web -->|"HTTP API"| Api
   Api --> Catalogo
@@ -38,7 +38,7 @@ flowchart TD
   Administracion --> Prisma
   Verificacion --> Prisma
   Prisma --> Modelo
-  Modelo --> Sqlite
+  Modelo --> Postgres
 ```
 
 ### Elementos, origen y límites
@@ -54,8 +54,8 @@ flowchart TD
 | Revisión | FR-002 de `specs/003-acceso-y-panel/spec.md`. | `server/src/revision-grados.js`. |
 | Administración | FR-003 de `specs/003-acceso-y-panel/spec.md`. | `server/src/administracion.js`. |
 | Verificación | FR-001–004 de `specs/002-verificar-documento/spec.md`. | `server/src/verificacion-documentos.js`. |
-| Prisma/libSQL | Flujos persistentes RF-DOC-001–003; fuente de existencia/configuración. | `server/src/index.js`, `server/package.json`. |
-| Modelos y almacenamiento SQLite | Fuente de existencia del esquema de los flujos anteriores; no implica por sí sola que cada entidad tenga flujo activo. | `server/prisma/schema.prisma`. |
+| PrismaPg/PostgreSQL | Flujos persistentes RF-DOC-001–003; fuente de existencia/configuración. | `server/src/index.js`, `server/prisma.config.ts`, `server/package.json`. |
+| Modelos y almacenamiento PostgreSQL | Fuente de existencia del esquema de los flujos anteriores; no implica por sí sola que cada entidad tenga flujo activo. | `server/prisma/schema.prisma`. |
 
 Las flechas continuas representan importación/registro o acceso a persistencia; las punteadas indican que `registrarIdentidad` devuelve `autenticar` y este se entrega a los módulos correspondientes desde `server/src/index.js`. El diagrama no implica que `registrarGoogle` se invoque directamente desde `index.js`: se registra internamente desde identidad.
 
@@ -81,4 +81,4 @@ Fuentes primarias: `server/src/index.js`, módulos listados, `server/prisma/sche
 | `registrarAdministracion(app, prisma, autenticar)` — `server/src/administracion.js` | GET `/api/administracion/configuracion`; GET y POST `/api/administracion/programas`; GET `/api/administracion/estudiantes`; GET y POST `/api/administracion/usuarios`; GET y POST `/api/administracion/requisitos`; GET `/api/administracion/auditoria` | FR-003 y FR-004 de `specs/003-acceso-y-panel/spec.md`. |
 | `registrarVerificacion(app, prisma, opciones)` — `server/src/verificacion-documentos.js` | GET `/api/documentos/verificar-qr/:codigo` | FR-001–FR-004 de `specs/002-verificar-documento/spec.md`. |
 
-El inventario completo está en `docs/01-analisis-de-sistema/03-requisitos-funcionales.md` (FR-016). El modelo SQLite se acredita por `server/prisma/schema.prisma` y el adaptador por `server/src/index.js`; la mención del esquema no afirma que toda entidad tenga una ruta operativa.
+El inventario completo está en `docs/01-analisis-de-sistema/03-requisitos-funcionales.md` (FR-016). El modelo PostgreSQL se acredita por `server/prisma/schema.prisma` y el adaptador por `server/src/index.js`; la mención del esquema no afirma que toda entidad tenga una ruta operativa.

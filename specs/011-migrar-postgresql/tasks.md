@@ -20,17 +20,17 @@
 
 **Precondición arquitectónica**: Completar T034–T038 antes de cualquier tarea que modifique `server/`, incluida T001.
 
-- [ ] T034 [P] [US4] Actualizar análisis, requisitos y decisiones de persistencia en `docs/01-analisis-de-sistema/` para describir PostgreSQL y la transferencia del origen real.
-- [ ] T035 [P] [US4] Actualizar decisiones, componentes y arquitectura de persistencia en `docs/02-arquitectura-software/` para reflejar Prisma PostgreSQL y el adaptador.
-- [ ] T036 [P] [US4] Crear la documentación de conexión, migración inicial, inicialización y operación PostgreSQL en `docs/03-diseno-detallado/`.
-- [ ] T037 [P] [US4] Actualizar los diagramas C4 pertinentes en `docs/04-modelo-c4/` para representar PostgreSQL y el adaptador de persistencia.
-- [ ] T038 [P] [US4] Actualizar stack, principio de base de datos e informe de impacto a v1.3.0 en `.specify/memory/constitution.md`.
+- [X] T034 [P] [US4] Actualizar análisis, requisitos y decisiones de persistencia en `docs/01-analisis-de-sistema/` para describir PostgreSQL y la transferencia del origen real.
+- [X] T035 [P] [US4] Actualizar decisiones, componentes y arquitectura de persistencia en `docs/02-arquitectura-software/` para reflejar Prisma PostgreSQL y el adaptador.
+- [X] T036 [P] [US4] Crear la documentación de conexión, migración inicial, inicialización y operación PostgreSQL en `docs/03-diseno-detallado/`.
+- [X] T037 [P] [US4] Actualizar los diagramas C4 pertinentes en `docs/04-modelo-c4/` para representar PostgreSQL y el adaptador de persistencia.
+- [X] T038 [P] [US4] Actualizar stack, principio de base de datos e informe de impacto a v1.3.0 en `.specify/memory/constitution.md`.
 
-- [ ] T002 Cambiar el provider a PostgreSQL en `server/prisma/schema.prisma` y preservar las restricciones de `Usuario.dni`, `Usuario.email`, `Estudiante.usuarioId`, `Estudiante.codigoUniv`, `PlantillaRequisito.codigo` y `Solicitud.codigo` según `specs/011-migrar-postgresql/data-model.md`.
-- [ ] T003 Generar y revisar la migración inicial en `server/prisma/migrations/` para que cree las diez tablas, enums, índices, relaciones y nombres físicos descritos en `specs/011-migrar-postgresql/data-model.md`.
-- [ ] T004 Ajustar la carga de `DATABASE_URL` para Prisma 7 en `server/prisma.config.ts` y validar que los comandos Prisma usan configuración PostgreSQL.
-- [ ] T005 Configurar el cliente Prisma con `PrismaPg` en `server/src/index.js`, exigir el prefijo `postgresql://` y fallar sin fallback a SQLite/libSQL.
-- [ ] T006 Sustituir la inicialización SQLite por despliegue idempotente de migraciones en `server/scripts/inicializar-base.js`, sin resetear ni borrar datos existentes.
+- [X] T002 Cambiar el provider a PostgreSQL en `server/prisma/schema.prisma` y preservar las restricciones de `Usuario.dni`, `Usuario.email`, `Estudiante.usuarioId`, `Estudiante.codigoUniv`, `PlantillaRequisito.codigo` y `Solicitud.codigo` según `specs/011-migrar-postgresql/data-model.md`.
+- [X] T003 Generar y revisar la migración inicial en `server/prisma/migrations/` para que cree las diez tablas, enums, índices, relaciones y nombres físicos descritos en `specs/011-migrar-postgresql/data-model.md`.
+- [X] T004 Ajustar la carga de `DATABASE_URL` para Prisma 7 en `server/prisma.config.ts` y validar que los comandos Prisma usan configuración PostgreSQL.
+- [X] T005 Configurar el cliente Prisma con `PrismaPg` en `server/src/index.js`, exigir el prefijo `postgresql://` y fallar sin fallback a SQLite/libSQL.
+- [X] T006 Sustituir la inicialización SQLite por despliegue idempotente de migraciones en `server/scripts/inicializar-base.js`, sin resetear ni borrar datos existentes.
 - [ ] T007 Verificar la generación del cliente y la inicialización de una base PostgreSQL vacía mediante `server/prisma/schema.prisma`, `server/prisma/migrations/` y `server/scripts/inicializar-base.js`.
 
 **Checkpoint**: T034–T038 están completos antes de T001 y cualquier cambio en `server/`; después, T001–T007 permiten generar el cliente y desplegar el esquema PostgreSQL en una base vacía.

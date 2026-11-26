@@ -16,7 +16,7 @@ Un proceso crea `app` y Prisma y monta módulos funcionales desde `server/src/in
 
 ### Persistencia: acceso mediante Prisma
 
-Los módulos importan/reciben la instancia Prisma y ejecutan operaciones de modelos directamente. El esquema declara SQLite, y el runtime configura `PrismaLibSql` con una URL local `file:`. La nota de comentario del esquema que menciona PostgreSQL no coincide con la configuración activa.
+Los módulos importan/reciben la instancia Prisma y ejecutan operaciones de modelos directamente. El esquema declara PostgreSQL y el runtime configura `PrismaPg` con `DATABASE_URL` de esquema `postgresql://`. Las migraciones versionadas establecen el esquema; la transferencia SQLite es independiente de la inicialización del proceso.
 
 ### Integraciones y protocolos
 

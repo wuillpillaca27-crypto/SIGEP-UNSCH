@@ -9,8 +9,8 @@ Las restricciones describen tecnologías, datos, operación y límites instituci
 ### Plataforma y arquitectura observada
 
 - El cliente es Next.js 16, React 19, TypeScript y Tailwind CSS 4 según `client/package.json`.
-- El servidor usa Node.js, Express 5 en CommonJS, Prisma 7 y el adaptador `@prisma/adapter-libsql`, según `server/package.json` y `server/src/index.js`.
-- `server/prisma/schema.prisma` declara `provider = "sqlite"`. `server/src/index.js` exige que `DATABASE_URL` comience por `file:` y crea Prisma con `PrismaLibSql`. Por ello el motor documentado es SQLite local mediante libSQL; la nota inicial del esquema que menciona PostgreSQL está desactualizada frente al provider/runtime.
+- El servidor usa Node.js, Express 5 en CommonJS, Prisma 7 y el adaptador `@prisma/adapter-pg`, junto con el driver `pg`, según `server/package.json` y `server/src/index.js`.
+- `server/prisma/schema.prisma` declara `provider = "postgresql"`. `server/prisma.config.ts` requiere `DATABASE_URL` y el arranque rechaza destinos que no usen el esquema `postgresql://`; no hay fallback a SQLite/libSQL. La inicialización aplica migraciones versionadas sin resetear datos existentes.
 - El servidor registra módulos de rutas y lógica directamente desde `server/src/index.js`. No se atribuyen capas separadas; en el estado inspeccionado `server/src/lib/`, `server/src/middleware/` y `server/src/routes/` están vacías.
 
 ### Seguridad y datos
