@@ -31,7 +31,7 @@
 - [X] T004 Ajustar la carga de `DATABASE_URL` para Prisma 7 en `server/prisma.config.ts` y validar que los comandos Prisma usan configuración PostgreSQL.
 - [X] T005 Configurar el cliente Prisma con `PrismaPg` en `server/src/index.js`, exigir el prefijo `postgresql://` y fallar sin fallback a SQLite/libSQL.
 - [X] T006 Sustituir la inicialización SQLite por despliegue idempotente de migraciones en `server/scripts/inicializar-base.js`, sin resetear ni borrar datos existentes.
-- [ ] T007 Verificar la generación del cliente y la inicialización de una base PostgreSQL vacía mediante `server/prisma/schema.prisma`, `server/prisma/migrations/` y `server/scripts/inicializar-base.js`.
+- [X] T007 Verificar la generación del cliente y la inicialización de una base PostgreSQL vacía mediante `server/prisma/schema.prisma`, `server/prisma/migrations/` y `server/scripts/inicializar-base.js`.
 
 **Checkpoint**: T034–T038 están completos antes de T001 y cualquier cambio en `server/`; después, T001–T007 permiten generar el cliente y desplegar el esquema PostgreSQL en una base vacía.
 
