@@ -23,8 +23,8 @@ description: "Tareas para un workflow CI independiente por paquete con Jest y ar
 
 **Propósito**: Preparar el entorno Jest de Next.js antes de migrar la suite y conectarla a CI.
 
-- [ ] T002 [P] Crear `client/jest.config.js` con la integración `next/jest`, entorno `jsdom`, resolución del alias `@/` desde `client/`, cobertura en `coverage/`, carga de `client/jest.setup.ts` y asignación de `process.env.TZ = "America/Lima"` trasladada desde `client/vitest.config.ts`; retirar `client/vitest.config.ts`.
-- [ ] T003 [P] Crear `client/jest.setup.ts` a partir de `client/vitest.setup.ts`, usar `@testing-library/jest-dom` y los hooks globales de Jest, preservar el ciclo `beforeAll`/`afterEach`/`afterAll` de MSW y retirar `client/vitest.setup.ts`.
+- [X] T002 [P] Crear `client/jest.config.js` con la integración `next/jest`, entorno `jsdom`, resolución del alias `@/` desde `client/`, cobertura en `coverage/`, carga de `client/jest.setup.ts` y asignación de `process.env.TZ = "America/Lima"` trasladada desde `client/vitest.config.ts`; retirar `client/vitest.config.ts`.
+- [X] T003 [P] Crear `client/jest.setup.ts` a partir de `client/vitest.setup.ts`, usar `@testing-library/jest-dom` y los hooks globales de Jest, preservar el ciclo `beforeAll`/`afterEach`/`afterAll` de MSW y retirar `client/vitest.setup.ts`.
 
 **Checkpoint**: `client/` ya dispone de configuración y setup Jest compatibles con Next.js; aún falta adaptar la suite existente y crear el workflow.
 

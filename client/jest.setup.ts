@@ -1,5 +1,5 @@
-import "@testing-library/jest-dom/vitest";
-import { afterAll, afterEach, beforeAll } from "vitest";
+import "@testing-library/jest-dom";
+import { afterAll, afterEach, beforeAll } from "@jest/globals";
 import { setupServer } from "msw/node";
 
 export const server = setupServer();
