@@ -1,19 +1,25 @@
+process.env.TZ = "America/Lima";
+
 const nextJest = require("next/jest");
 
 const createJestConfig = nextJest({ dir: "./" });
 
-process.env.TZ = "America/Lima";
-
+/** @type {import('jest').Config} */
 const customJestConfig = {
-  coverageDirectory: "coverage",
-  coverageProvider: "v8",
-  coverageReporters: ["text", "html", "lcov"],
-  collectCoverageFrom: ["app/**/*.{ts,tsx}", "!app/**/__tests__/**", "!app/**/*.d.ts"],
   testEnvironment: "jsdom",
+  testEnvironmentOptions: { customExportConditions: ["node", "node-addons"] },
+  transformIgnorePatterns: [
+    "node_modules/(?!(msw|@mswjs|rettime|@open-draft|outvariant|headers-polyfill|next)/)",
+  ],
+  setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"],
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/$1",
+    "^msw/node$": "<rootDir>/node_modules/msw/lib/node/index.js",
   },
-  setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"],
+  verbose: true,
+  collectCoverage: true,
+  coverageDirectory: "<rootDir>/coverage",
+  coverageReporters: ["text", "html", "lcov"],
 };
 
 module.exports = createJestConfig(customJestConfig);
