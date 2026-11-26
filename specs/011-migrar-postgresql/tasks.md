@@ -10,7 +10,7 @@
 
 **Purpose**: Preparar dependencias y comandos del servidor para PostgreSQL.
 
-- [ ] T001 Actualizar dependencias Prisma y scripts de base de datos en `server/package.json` y regenerar `server/package-lock.json` para usar `@prisma/adapter-pg` y `pg` con Prisma 7.8.0.
+- [X] T001 Actualizar dependencias Prisma y scripts de base de datos en `server/package.json` y regenerar `server/package-lock.json` para usar `@prisma/adapter-pg` y `pg` con Prisma 7.8.0.
 
 ---
 
