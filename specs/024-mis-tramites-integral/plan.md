@@ -1,113 +1,44 @@
-# Implementation Plan: [FEATURE]
+# Plan: Mis Trámites integral
 
-**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
+**Feature Branch**: `024-mis-tramites-integral` | **Fecha**: 2026-11-26 | **Spec**: [spec.md](spec.md)
 
-**Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
+## Resumen
 
-**Note**: This template is filled in by the `$speckit-plan` command; its definition describes the execution workflow.
+Completar los seis destinos reutilizando `Solicitud` como fuente única. Las páginas y varias operaciones ya existen; las brechas detectadas incluyen resumen reducido, filtros/acciones incompletos y ausencia de notificaciones persistentes. Los borradores se cancelan conservando auditoría; se mantienen las validaciones administrativas y los documentos versionados.
 
-## Summary
+## Contexto técnico
 
-[Extract from feature spec: primary requirement + technical approach from research]
+- Frontend: Next.js 16, React 19, TypeScript, Jest/MSW.
+- Backend: Express 5 CommonJS, Prisma 7/PostgreSQL, JWT en cookie HttpOnly.
+- Persistencia existente: solicitudes, requisitos, documentos, revisiones, historial y auditoría.
+- Cambio previsto: añadir entidad aditiva de notificación interna, API de lectura/acuse y emisión de eventos desde transiciones existentes; cancelación de borrador solo si `estado=borrador` y titularidad coincide; filtros del cliente sin confiar en permisos del cliente.
+- Verificación realizada: Jest cliente 26 suites/76 pruebas; Jest servidor 13 suites/74 pruebas; build Next.js exitoso. Los 45 recorridos E2E siguen pendientes.
+- Restricciones: no cambiar el menú institucional, portada, login ni módulos de Grados/Certificaciones; no tocar `specs/013` y `specs/015`; no imprimir secretos; no migrar SQLite; no reset/db push.
 
-## Technical Context
+## Constitución
 
-<!--
-  ACTION REQUIRED: Replace the content in this section with the technical details
-  for the project. The structure here is presented in advisory capacity to guide
-  the iteration process.
--->
+- Spec, plan, tareas y evidencias en español: PASS.
+- Reutiliza el modelo común de expediente y ownership en servidor: PASS.
+- La única tabla nueva propuesta es una notificación interna, sin correo externo: PASS, requiere migración aditiva.
+- Ninguna área/plazo/notificación externa se inventa: PASS.
+- Tests Jest y build obligatorios: PASS en ambas capas (resultados indicados arriba).
 
-**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]
+## Investigación
 
-**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]
+Los hallazgos se documentan en [research.md](research.md). Entidades y restricciones están en [data-model.md](data-model.md); endpoints en [contracts/mis-tramites.md](contracts/mis-tramites.md). Los recorridos están en [quickstart.md](quickstart.md).
 
-**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
+## Fases
 
-**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]
+1. Pruebas de regresión y matriz de estados/permisos.
+2. Migración aditiva de notificaciones y endpoints propiedad-scoped.
+3. Integrar notificaciones con transiciones de solicitud/revisión de manera transaccional.
+4. Completar tablero, filtros, paginación y acciones de solicitudes/expedientes.
+5. Asegurar observaciones, subsanación, versiones, historial y enlaces de descarga.
+6. Ejecutar cobertura y build; los E2E sintéticos CP01–CP45 quedan pendientes de automatización/ejecución.
 
-**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
+## Riesgos
 
-**Project Type**: [e.g., library/cli/web-service/mobile-app/compiler/desktop-app or NEEDS CLARIFICATION]
-
-**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]
-
-**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]
-
-**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
-
-## Constitution Check
-
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
-
-[Gates determined based on constitution file]
-
-## Project Structure
-
-### Documentation (this feature)
-
-```text
-specs/[###-feature]/
-├── plan.md              # This file ($speckit-plan command output)
-├── research.md          # Phase 0 output ($speckit-plan command)
-├── data-model.md        # Phase 1 output ($speckit-plan command)
-├── quickstart.md        # Phase 1 output ($speckit-plan command)
-├── contracts/           # Phase 1 output ($speckit-plan command)
-└── tasks.md             # Phase 2 output ($speckit-tasks command - NOT created by $speckit-plan)
-```
-
-### Source Code (repository root)
-<!--
-  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
-  for this feature. Delete unused options and expand the chosen structure with
-  real paths (e.g., apps/admin, packages/something). The delivered plan must
-  not include Option labels.
--->
-
-```text
-# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
-src/
-├── models/
-├── services/
-├── cli/
-└── lib/
-
-tests/
-├── contract/
-├── integration/
-└── unit/
-
-# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
-backend/
-├── src/
-│   ├── models/
-│   ├── services/
-│   └── api/
-└── tests/
-
-frontend/
-├── src/
-│   ├── components/
-│   ├── pages/
-│   └── services/
-└── tests/
-
-# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
-api/
-└── [same as backend above]
-
-ios/ or android/
-└── [platform-specific structure: feature modules, UI flows, platform tests]
-```
-
-**Structure Decision**: [Document the selected structure and reference the real
-directories captured above]
-
-## Complexity Tracking
-
-> **Fill ONLY if Constitution Check has violations that must be justified**
-
-| Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|-------------------------------------|
-| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
-| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
+- La tabla `Revision` puede carecer de área institucional; la interfaz no inventa esa información.
+- No existe proveedor de correo configurado; el alcance es notificación interna persistente.
+- Cancelar borrador conserva integridad de auditoría y archivos sin destruir registros ni borrar archivos subidos.
+- Historial, timeline y progreso se derivan de `HistorialEstado`, nunca de porcentajes arbitrarios.

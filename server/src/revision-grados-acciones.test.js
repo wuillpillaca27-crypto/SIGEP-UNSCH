@@ -29,6 +29,7 @@ async function crearContexto() {
 
   async function restablecer() {
     await prisma.$transaction(async (tx) => {
+      await tx.notificacion.deleteMany();
       await tx.revision.deleteMany();
       await tx.auditoria.deleteMany();
       await tx.documentoSolicitud.deleteMany();

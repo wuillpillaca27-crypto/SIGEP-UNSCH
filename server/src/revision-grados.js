@@ -2,10 +2,10 @@ const express = require("express");
 const { resolve } = require("node:path");
 const { randomUUID } = require("node:crypto");
 const { mkdir, writeFile, unlink } = require("node:fs/promises");
-const { detalle, tiposGrado, pdfValido } = require("./solicitudes");
+const { detalle, tiposGrado, pdfValido, crearNotificacion } = require("./solicitudes");
 
 const alcance = { presentadoEn: { not: null }, tipoTramite: { in: tiposGrado } };
-const seleccion = { ...detalle, usuario: { select: { nombres: true, apellidos: true } } };
+const seleccion = { ...detalle, usuarioId: true, usuario: { select: { nombres: true, apellidos: true } } };
 const accionesAutoridad = ["aprobar", "rechazar", "preparar_emision", "emitir", "anular"];
 const etapas = {
   revisar: { desde: ["presentado"], hacia: "en_revision", registro: "iniciar_revision" },
@@ -138,6 +138,18 @@ function registrarRevision(app, prisma, autenticar, directorio) {
         usuarioId: req.usuario.id, accion, entidad: "solicitud", entidadId: id,
         detalles: requisito ? JSON.stringify({ requisitoId: requisito.id }) : null,
       } });
+      if (estado !== caso.estado) {
+        const mensajes = {
+          en_revision: "Tu expediente ingresó a revisión.", observado: "Tu expediente tiene observaciones pendientes.",
+          validado: "La validación de tu expediente terminó.", pendiente_aprobacion: "Tu expediente fue remitido a aprobación.",
+          aprobado: "Tu expediente fue aprobado.", rechazado: "Tu solicitud fue rechazada.", en_emision: "Tu documento está en preparación.",
+          emitido: "Tu documento fue emitido y está disponible en el expediente.", anulado: "Tu documento fue anulado.",
+        };
+        await crearNotificacion(db, { usuarioId: caso.usuarioId, solicitudId: id,
+          tipo: accion === "observar" ? "observacion_registrada" : `estado_${estado}`,
+          mensaje: `${mensajes[estado] ?? `El estado cambió a ${estado.replaceAll("_", " ")}.`} Expediente ${caso.codigo}.`,
+        });
+      }
       return { caso: await db.solicitud.findFirst({ where: { id }, select: seleccion }) };
     }).catch(async (error) => {
       if (rutaPDF) await unlink(rutaPDF).catch(() => {});

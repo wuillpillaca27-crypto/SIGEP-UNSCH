@@ -65,6 +65,7 @@ async function crearContexto() {
   async function restablecer() {
     await prisma.$transaction(async (tx) => {
       await tx.consultaOrientacion.deleteMany();
+      await tx.notificacion.deleteMany();
       await tx.revision.deleteMany();
       await tx.auditoria.deleteMany();
       await tx.documentoSolicitud.deleteMany();
@@ -124,6 +125,31 @@ describe("Solicitudes, revisión e identidad", () => {
   beforeAll(async () => { ctx = await crearContexto(); });
   beforeEach(async () => { await ctx.restablecer(); });
   afterAll(async () => { await ctx.cerrar(); });
+
+  test("notificaciones propias: presentación, lectura idempotente, lectura masiva y aislamiento", async () => {
+    const token = await ctx.ingresar(1);
+    const tokenAjeno = await ctx.ingresar(2);
+    const { solicitud, ruta } = await prepararSolicitud(ctx, token);
+    await ctx.pedir(ruta + "/presentar", 200, { token, metodo: "POST" });
+
+    const bandeja = await ctx.pedir("/solicitudes/notificaciones", 200, { token });
+    expect(bandeja.noLeidas).toBe(1);
+    expect(bandeja.datos[0]).toMatchObject({ solicitudId: solicitud.id, tipo: "solicitud_presentada", leida: false });
+    await ctx.pedir(`/solicitudes/notificaciones/${bandeja.datos[0].id}/leer`, 200, { token, metodo: "PATCH", datos: {} });
+    await ctx.pedir(`/solicitudes/notificaciones/${bandeja.datos[0].id}/leer`, 200, { token, metodo: "PATCH", datos: {} });
+    expect((await ctx.pedir("/solicitudes/notificaciones", 200, { token })).noLeidas).toBe(0);
+
+    const privada = await ctx.prisma.notificacion.create({ data: {
+      usuarioId: 2, tipo: "privada", mensaje: "No debe aparecer en otra cuenta.",
+    } });
+    await ctx.pedir(`/solicitudes/notificaciones/${privada.id}/leer`, 404, { token, metodo: "PATCH", datos: {} });
+    await ctx.prisma.notificacion.create({ data: { usuarioId: 1, tipo: "segunda", mensaje: "Aviso adicional." } });
+    expect(await ctx.pedir("/solicitudes/notificaciones/leer-todas", 200, { token, metodo: "PATCH", datos: {} })).toEqual({ actualizadas: 1 });
+    expect((await ctx.pedir("/solicitudes/notificaciones", 200, { token })).noLeidas).toBe(0);
+    expect((await ctx.pedir("/solicitudes/notificaciones", 200, { token: tokenAjeno })).datos).toEqual([
+      expect.objectContaining({ tipo: "privada" }),
+    ]);
+  });
 
   test("retira adjuntos de borradores y limita la constancia al titular después de presentar", async () => {
     const token = await ctx.ingresar(1);
@@ -339,6 +365,7 @@ describe("Solicitudes, revisión e identidad", () => {
     assert.equal(repetido.codigo, presentado.codigo);
     assert.equal((await ctx.pedir(ruta + "/presentar", 200, { token, metodo: "POST" })).codigo, presentado.codigo);
     assert.equal(await ctx.prisma.historialEstado.count({ where: { estadoDespues: "presentado" } }), 1);
+    assert.equal(await ctx.prisma.notificacion.count({ where: { solicitudId: solicitud.id, tipo: "solicitud_presentada" } }), 1);
     await ctx.pedir("/revision-grados", 403, { token });
     assert.equal(solicitud.tipoTramite, "grado_doctor");
   });
@@ -373,6 +400,10 @@ describe("Solicitudes, revisión e identidad", () => {
     assert.equal(verificado.codigo, presentado.codigo);
     assert.equal(verificado.tipoTramite, "grado_doctor");
     assert(verificado.emitidoEn);
+    const eventos = await ctx.prisma.notificacion.findMany({ where: { solicitudId: solicitud.id }, select: { tipo: true } });
+    expect(eventos.map(({ tipo }) => tipo)).toEqual(expect.arrayContaining([
+      "solicitud_presentada", "observacion_registrada", "estado_en_revision", "estado_aprobado", "estado_emitido",
+    ]));
     await ctx.pedir(verificacion + "?tipo=grado_maestro", 404);
     await ctx.prisma.solicitud.update({ where: { id: solicitud.id }, data: { estado: "anulado" } });
     await ctx.pedir(verificacion, 404);

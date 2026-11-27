@@ -36,6 +36,7 @@ model Usuario {
   cambiosAcademicos CambioAcademico[]
   orientacionesRespondidas ConsultaOrientacion[]
   documentosSubidos DocumentoSolicitud[] @relation("DocumentoSubidoPor")
+  notificaciones Notificacion[]
 
   @@map("usuarios")
 }
@@ -205,6 +206,7 @@ model Solicitud {
   validaciones  ValidacionRequisito[]
   historial     HistorialEstado[]
   auditorias    Auditoria[]
+  notificaciones Notificacion[]
 
   @@map("solicitudes")
 }
@@ -296,6 +298,23 @@ model ConsultaOrientacion {
 
   @@index([creadoEn, id])
   @@map("consultas_orientacion")
+}
+
+model Notificacion {
+  id          Int       @id @default(autoincrement())
+  usuarioId   Int
+  solicitudId Int?
+  tipo        String
+  mensaje     String
+  leida       Boolean   @default(false)
+  creadoEn    DateTime  @default(now())
+  leidaEn     DateTime?
+
+  usuario   Usuario    @relation(fields: [usuarioId], references: [id])
+  solicitud Solicitud? @relation(fields: [solicitudId], references: [id], onDelete: SetNull)
+
+  @@index([usuarioId, leida, creadoEn, id])
+  @@map("notificaciones")
 }
 
 // ══════════════════════════════════════════════════════════════

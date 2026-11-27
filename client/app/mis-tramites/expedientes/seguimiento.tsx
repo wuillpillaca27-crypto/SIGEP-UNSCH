@@ -15,6 +15,11 @@ const vistas = {
 } as const;
 
 const fecha = new Intl.DateTimeFormat("es-PE", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Lima" });
+const etapasProceso = ["presentado", "en_revision", "validado", "pendiente_aprobacion", "aprobado", "en_emision", "emitido"];
+
+function avanceRegistrado(solicitud: Solicitud) {
+  return etapasProceso.filter((etapa) => solicitud.historial.some(({ estadoDespues }) => estadoDespues === etapa)).length;
+}
 
 export default function Seguimiento({ vista }: { vista: keyof typeof vistas }) {
   const [lista, setLista] = useState<Solicitud[]>();
@@ -24,6 +29,12 @@ export default function Seguimiento({ vista }: { vista: keyof typeof vistas }) {
   const [aviso, setAviso] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const [estado, setEstado] = useState("");
+  const [tipoFiltro, setTipoFiltro] = useState("");
+  const [programaId, setProgramaId] = useState("");
+  const [desde, setDesde] = useState("");
+  const [hasta, setHasta] = useState("");
+  const [orden, setOrden] = useState("reciente");
+  const [pagina, setPagina] = useState(1);
   const [reintento, setReintento] = useState(0);
   const [sesionVencida, setSesionVencida] = useState(false);
   const destinoAtendido = useRef("");
@@ -92,13 +103,26 @@ export default function Seguimiento({ vista }: { vista: keyof typeof vistas }) {
   const observados = vista === "observaciones" || vista === "subsanacion";
   const normalizar = (texto: string) => texto.toLocaleLowerCase("es").normalize("NFD").replace(/\p{Diacritic}/gu, "");
   const consulta = normalizar(busqueda.trim());
-  const expedientes = lista?.filter((item) => {
+  const filtrados = lista?.filter((item) => {
     if (estado && item.estado !== estado) return false;
+    if (tipoFiltro && item.tipoTramite !== tipoFiltro) return false;
+    if (programaId && String(item.programa.id) !== programaId) return false;
     if (observados && item.estado !== "observado") return false;
     if (!observados && vista !== "solicitudes" && !item.presentadoEn) return false;
     const tipo = Object.values(tramitesAcademicos).find(({ tipo }) => tipo === item.tipoTramite);
+    const fechaRegistro = (item.presentadoEn ?? item.creadoEn ?? item.actualizadoEn ?? "").slice(0, 10);
+    if (desde && fechaRegistro < desde) return false;
+    if (hasta && fechaRegistro > hasta) return false;
     return normalizar(`${item.codigo} ${item.programa.nombre} ${tipo?.nombre ?? item.tipoTramite}`).includes(consulta);
   });
+  const ordenados = [...(filtrados ?? [])].sort((a, b) => {
+    const fechaA = Date.parse(a.presentadoEn ?? a.actualizadoEn ?? a.creadoEn ?? "") || 0;
+    const fechaB = Date.parse(b.presentadoEn ?? b.actualizadoEn ?? b.creadoEn ?? "") || 0;
+    return (orden === "antiguo" ? fechaA - fechaB : fechaB - fechaA) || b.id - a.id;
+  });
+  const porPagina = 10;
+  const totalPaginas = Math.max(1, Math.ceil(ordenados.length / porPagina));
+  const expedientes = ordenados.slice((pagina - 1) * porPagina, pagina * porPagina);
   const movimientos = vista === "historial" ? expedientes?.flatMap((item) =>
     item.historial.map((movimiento) => ({ ...movimiento, expedienteId: item.id, codigo: item.codigo }))
   ).sort((a, b) => Date.parse(b.creadoEn) - Date.parse(a.creadoEn) || b.id - a.id) : undefined;
@@ -122,13 +146,27 @@ export default function Seguimiento({ vista }: { vista: keyof typeof vistas }) {
       {!lista && <p role="status">Consultando solicitudes…</p>}
       {lista && !sesionVencida && <section className={styles.panel}><div className={styles.formulario}>
         <label>Buscar por código, programa o trámite
-          <input type="search" value={busqueda} onChange={(evento) => setBusqueda(evento.target.value)} />
+          <input type="search" value={busqueda} onChange={(evento) => { setBusqueda(evento.target.value); setPagina(1); }} />
         </label>
-        {!observados && <label>Filtrar por estado<select value={estado} onChange={(evento) => setEstado(evento.target.value)}>
+        <label>Filtrar por tipo<select value={tipoFiltro} onChange={(evento) => { setTipoFiltro(evento.target.value); setPagina(1); }}>
+          <option value="">Todos los trámites</option>
+          {[...new Set(lista.map((item) => item.tipoTramite))].map((valor) => <option key={valor} value={valor}>{Object.values(tramitesAcademicos).find((tramite) => tramite.tipo === valor)?.nombre ?? valor}</option>)}
+        </select></label>
+        <label>Filtrar por programa<select value={programaId} onChange={(evento) => { setProgramaId(evento.target.value); setPagina(1); }}>
+          <option value="">Todos los programas</option>
+          {[...new Map(lista.map((item) => [String(item.programa.id ?? ""), item.programa.nombre])).entries()].map(([id, nombre]) => <option key={id} value={id}>{nombre}</option>)}
+        </select></label>
+        {!observados && <label>Filtrar por estado<select value={estado} onChange={(evento) => { setEstado(evento.target.value); setPagina(1); }}>
           <option value="">Todos los estados</option>
           {[...new Set(lista.filter((item) => vista === "solicitudes" || item.presentadoEn).map((item) => item.estado))].map((valor) =>
             <option key={valor} value={valor}>{estadoVisible(valor)}</option>)}
         </select></label>}
+        <label>Desde<input type="date" value={desde} onChange={(evento) => { setDesde(evento.target.value); setPagina(1); }} /></label>
+        <label>Hasta<input type="date" value={hasta} onChange={(evento) => { setHasta(evento.target.value); setPagina(1); }} /></label>
+        <label>Ordenar<select value={orden} onChange={(evento) => { setOrden(evento.target.value); setPagina(1); }}>
+          <option value="reciente">Más recientes</option><option value="antiguo">Más antiguos</option>
+        </select></label>
+        <button type="button" onClick={() => { setBusqueda(""); setEstado(""); setTipoFiltro(""); setProgramaId(""); setDesde(""); setHasta(""); setOrden("reciente"); setPagina(1); }}>Limpiar filtros</button>
       </div></section>}
       {(movimientos ?? expedientes)?.length === 0 && !errorConsulta && <p>{consulta || estado ? "No hay resultados para los filtros aplicados." : vacio}</p>}
       {movimientos && movimientos.length > 0 && <section className={styles.panel}>
@@ -142,16 +180,27 @@ export default function Seguimiento({ vista }: { vista: keyof typeof vistas }) {
       </section>}
       {vista !== "historial" && expedientes?.map((item) => {
         const tramite = Object.entries(tramitesAcademicos).find(([, datos]) => datos.tipo === item.tipoTramite);
+        const avance = avanceRegistrado(item);
         return (
           <article key={item.id} id={vista === "expedientes" ? `expediente-${item.id}` : vista === "subsanacion" ? `subsanar-${item.id}` : undefined} className={styles.panel}>
             <h2>{tramite?.[1].nombre ?? item.tipoTramite}</h2>
             <p>{item.programa.nombre} · <strong>{estadoVisible(item.estado)}</strong></p>
             {item.presentadoEn ? <p>{item.codigo} · {new Date(item.presentadoEn).toLocaleDateString("es-PE")}</p>
               : item.estado === "borrador" && <p><Link href={tramite ? rutaSolicitud(tramite[0], item.programa.id) : "/mis-tramites/programas"}>Continuar borrador</Link></p>}
+            {vista === "expedientes" && item.presentadoEn && <div>
+              <p>Etapas del flujo registradas: {avance} de {etapasProceso.length}</p>
+              <progress aria-label="Progreso según etapas registradas" value={avance} max={etapasProceso.length} />
+              <ol aria-label={`Etapas registradas de ${item.codigo}`} className={styles.lista}>
+              {item.historial.filter(({ estadoDespues }) => estadoDespues !== "borrador").map((movimiento) => <li key={movimiento.id}>
+                <strong>{estadoVisible(movimiento.estadoDespues)}</strong> · <time dateTime={movimiento.creadoEn}>{fecha.format(new Date(movimiento.creadoEn))}</time>
+                {movimiento.motivo && <p>{movimiento.motivo}</p>}
+              </li>)}
+              </ol>
+            </div>}
             {item.estado === "emitido" && <p><Link href={`/verificar-documento?codigo=${encodeURIComponent(item.codigo)}`}>Verificar documento emitido</Link></p>}
             {item.presentadoEn && <p><a href={rutaConstancia(item.id)}>Descargar acuse de presentación</a></p>}
             {vista === "solicitudes" && ["borrador", "presentado", "en_revision", "observado", "validado", "pendiente_aprobacion"].includes(item.estado) && (
-              <details><summary>Desistir de esta solicitud</summary>
+              <details><summary>{item.estado === "borrador" ? "Cancelar borrador" : "Solicitar desistimiento"}</summary>
                 <form className={styles.formulario} onSubmit={(evento) => {
                   evento.preventDefault();
                   const motivo = new FormData(evento.currentTarget).get("motivo");
@@ -214,6 +263,11 @@ export default function Seguimiento({ vista }: { vista: keyof typeof vistas }) {
           </article>
         );
       })}
+      {lista && totalPaginas > 1 && <nav className={styles.panel} aria-label="Paginación de trámites">
+        <button type="button" disabled={pagina <= 1} onClick={() => setPagina((actual) => Math.max(1, actual - 1))}>Página anterior</button>
+        <span> Página {Math.min(pagina, totalPaginas)} de {totalPaginas} · {ordenados.length} resultados </span>
+        <button type="button" disabled={pagina >= totalPaginas} onClick={() => setPagina((actual) => Math.min(totalPaginas, actual + 1))}>Página siguiente</button>
+      </nav>}
     </main>
   );
 }

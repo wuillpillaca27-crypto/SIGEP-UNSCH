@@ -34,6 +34,10 @@ const filtroPlantillasActivas = (programaId, tipoTramite) => ({
   programa: { activo: true, ...programasVisibles(), ...configuracionHabilitada(tipoTramite) },
 });
 
+async function crearNotificacion(db, { usuarioId, solicitudId, tipo, mensaje }) {
+  return db.notificacion.create({ data: { usuarioId, solicitudId, tipo, mensaje } });
+}
+
 function matriculaHabilitada(matricula) {
   return matricula.habilitadoTramites && matricula.fechaInicio <= new Date() &&
     ["activo", "egresado", "graduado"].includes(matricula.estadoAcad);
@@ -85,7 +89,7 @@ async function opcionesDeMatricula(prisma, usuarioId, soloCertificaciones) {
 }
 
 const detalle = {
-  id: true, codigo: true, estado: true, tipoTramite: true, presentadoEn: true, observaciones: true,
+  id: true, codigo: true, estado: true, tipoTramite: true, creadoEn: true, actualizadoEn: true, presentadoEn: true, observaciones: true,
   programa: { select: { id: true, nombre: true } },
   validaciones: {
     select: {
@@ -126,6 +130,37 @@ function registrarSolicitudes(app, prisma, autenticar, directorio) {
       return res.status(403).json({ error: "El trámite requiere una cuenta de estudiante" });
     }
     return next();
+  });
+
+  router.get("/notificaciones", async (req, res) => {
+    const where = { usuarioId: req.usuario.id };
+    const [datos, noLeidas] = await Promise.all([
+      prisma.notificacion.findMany({
+        where, orderBy: [{ creadoEn: "desc" }, { id: "desc" }], take: 50,
+        select: { id: true, solicitudId: true, tipo: true, mensaje: true, leida: true, creadoEn: true, leidaEn: true },
+      }),
+      prisma.notificacion.count({ where: { ...where, leida: false } }),
+    ]);
+    return res.json({ datos, noLeidas });
+  });
+
+  router.patch("/notificaciones/leer-todas", async (req, res) => {
+    const resultado = await prisma.notificacion.updateMany({
+      where: { usuarioId: req.usuario.id, leida: false }, data: { leida: true, leidaEn: new Date() },
+    });
+    return res.json({ actualizadas: resultado.count });
+  });
+
+  router.patch("/notificaciones/:notificacionId/leer", async (req, res) => {
+    if (!/^[1-9]\d{0,8}$/.test(req.params.notificacionId)) return res.status(404).json({ error: "Notificación no encontrada" });
+    const id = Number(req.params.notificacionId);
+    const actual = await prisma.notificacion.updateMany({
+      where: { id, usuarioId: req.usuario.id, leida: false }, data: { leida: true, leidaEn: new Date() },
+    });
+    if (!actual.count && !await prisma.notificacion.findFirst({ where: { id, usuarioId: req.usuario.id }, select: { id: true } })) {
+      return res.status(404).json({ error: "Notificación no encontrada" });
+    }
+    return res.json({ ok: true });
   });
 
   const propiedad = (req) => ({ id: Number(req.params.id), usuarioId: req.usuario.id, tipoTramite: { in: tiposGrado } });
@@ -219,6 +254,7 @@ function registrarSolicitudes(app, prisma, autenticar, directorio) {
       if (cambio.count) {
         await db.historialEstado.create({ data: { solicitudId: solicitud.id, estadoAntes: "borrador", estadoDespues: "presentado" } });
         await db.auditoria.create({ data: { usuarioId: req.usuario.id, accion: "presentar", entidad: "solicitud", entidadId: solicitud.id } });
+        await crearNotificacion(db, { usuarioId: req.usuario.id, solicitudId: solicitud.id, tipo: "solicitud_presentada", mensaje: `Tu solicitud ${solicitud.codigo} fue presentada.` });
       }
       return { solicitud: await encontrar(db, req) };
     });
@@ -339,6 +375,7 @@ function registrarSolicitudes(app, prisma, autenticar, directorio) {
       if (!cambio.count) return { status: 409, error: "El expediente cambió de estado" };
       await db.historialEstado.create({ data: { solicitudId: solicitud.id, estadoAntes: "observado", estadoDespues: "en_revision", motivo: "Subsanación presentada" } });
       await db.auditoria.create({ data: { usuarioId: req.usuario.id, accion: "subsanar", entidad: "solicitud", entidadId: solicitud.id } });
+      await crearNotificacion(db, { usuarioId: req.usuario.id, solicitudId: solicitud.id, tipo: "subsanacion_enviada", mensaje: `La subsanación del expediente ${solicitud.codigo} se envió a revisión.` });
       return { solicitud: await encontrar(db, req) };
     });
     return resultado.error ? res.status(resultado.status).json({ error: resultado.error }) : res.json(resultado.solicitud);
@@ -357,6 +394,7 @@ function registrarSolicitudes(app, prisma, autenticar, directorio) {
       if (!cambio.count) return { status: 409, error: "El expediente cambió de estado." };
       await db.historialEstado.create({ data: { solicitudId: solicitud.id, estadoAntes: solicitud.estado, estadoDespues: "desistido", motivo } });
       await db.auditoria.create({ data: { usuarioId: req.usuario.id, accion: "desistir", entidad: "solicitud", entidadId: solicitud.id } });
+      await crearNotificacion(db, { usuarioId: req.usuario.id, solicitudId: solicitud.id, tipo: "solicitud_desistida", mensaje: `La solicitud ${solicitud.codigo} se canceló a petición tuya.` });
       return { solicitud: await encontrar(db, req) };
     });
     return resultado.error ? res.status(resultado.status).json({ error: resultado.error }) : res.json(resultado.solicitud);
@@ -377,4 +415,4 @@ function registrarSolicitudes(app, prisma, autenticar, directorio) {
   });
 }
 
-module.exports = { detalle, registrarSolicitudes, tiposGrado, tipoPorPrograma, configuracionHabilitada, pdfValido };
+module.exports = { detalle, registrarSolicitudes, tiposGrado, tipoPorPrograma, configuracionHabilitada, pdfValido, crearNotificacion };

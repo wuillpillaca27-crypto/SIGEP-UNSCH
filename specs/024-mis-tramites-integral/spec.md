@@ -24,7 +24,7 @@ Como estudiante quiero elegir un trámite habilitado por mis matrículas, crear 
 
 1. El catálogo deriva opciones de programas/matrículas reales y no preselecciona una opción incompatible.
 2. El borrador se conserva al cambiar de ruta o sesión; documentos reemplazados conservan historial.
-3. El estudiante puede eliminar solo un borrador propio; solicitudes presentadas se modifican solo por flujos autorizados.
+3. El estudiante puede cancelar solo un borrador propio con confirmación y motivo; se conserva el registro y la auditoría. Solicitudes presentadas se modifican solo por flujos autorizados.
 4. La presentación valida requisitos y previene duplicados conforme a las reglas actuales.
 
 ### Historia 3: Consultar solicitudes y expedientes (P1)
@@ -71,7 +71,7 @@ Como estudiante quiero recibir y marcar notificaciones asociadas a mis expedient
 - **FR-001**: Las seis páginas requieren sesión de estudiante y conservan retorno al login.
 - **FR-002**: El panel calcula conteos, actividad y documentos a partir de registros propios.
 - **FR-003**: Nueva Solicitud lista únicamente programas/trámites autorizados por matrícula y mantiene validación en backend.
-- **FR-004**: Borradores se recuperan; solo borradores propios pueden eliminarse y toda acción destructiva pide confirmación.
+- **FR-004**: Borradores se recuperan; solo borradores propios pueden cancelarse con motivo y confirmación, conservando historial/auditoría.
 - **FR-005**: Mis Solicitudes ofrece búsqueda, filtros combinables, orden y paginación, con acciones según estado.
 - **FR-006**: El estado muestra timeline e hitos reales con fecha/actor/motivo disponibles; nunca inventa áreas o fechas.
 - **FR-007**: Observaciones y subsanaciones filtran por titular, guardan comentarios y conservan las versiones de documentos.

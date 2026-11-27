@@ -11,6 +11,7 @@ export type Perfil = {
 };
 export type Solicitud = {
   id: number; codigo: string; estado: string; tipoTramite: string; presentadoEn: string | null;
+  creadoEn?: string; actualizadoEn?: string;
   observaciones: string | null; programa: { id?: number; nombre: string };
   documentos: { id: number; nombre: string; tipoDoc: string }[];
   validaciones: {
@@ -19,6 +20,7 @@ export type Solicitud = {
   }[];
   historial: { id: number; estadoDespues: string; creadoEn: string; motivo: string | null }[];
 };
+export type Notificacion = { id: number; solicitudId: number | null; tipo: string; mensaje: string; leida: boolean; creadoEn: string; leidaEn: string | null };
 type MotivoMatricula = "programa_inactivo" | "sin_requisitos_activos" | "tramite_deshabilitado" | "plantilla_no_publicada" | "matricula_no_habilitada";
 type ProgramaSolicitud = {
     id: number; nombre: string; tipo: string; activo: boolean;
@@ -46,6 +48,9 @@ export const solicitudes = {
   opciones: () => api.get<OpcionesSolicitud>("/solicitudes/opciones"),
   cerrarSesion: () => api.post<{ ok: boolean }>("/auth/logout", {}),
   listar: () => api.get<Solicitud[]>("/solicitudes"),
+  notificaciones: () => api.get<{ datos: Notificacion[]; noLeidas: number }>("/solicitudes/notificaciones"),
+  marcarNotificacion: (id: number) => api.patch<{ ok: boolean }>(`/solicitudes/notificaciones/${id}/leer`, {}),
+  marcarTodasNotificaciones: () => api.patch<{ actualizadas: number }>("/solicitudes/notificaciones/leer-todas", {}),
   crear: (tipoTramite: string, programaId?: number) => api.post<Solicitud>("/solicitudes", {
     tipoTramite,
     ...(programaId !== undefined ? { programaId } : {}),
