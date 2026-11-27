@@ -3,12 +3,25 @@ const { facultadesDemostracion, programasVisibles, requisitosVisibles } = requir
 
 const tipos = new Map(Object.entries(tipoPorPrograma).map(([programa, tramite]) => [tramite, programa]));
 
+function leerFormatos(formatos) {
+  if (!Array.isArray(formatos) || formatos.length > 20) throw new Error("Lista de formatos oficiales inválida.");
+  return formatos.map((formato) => {
+    const { nombre, url } = formato ?? {};
+    const enlace = typeof url === "string" && url.length <= 2000 ? URL.parse(url) : null;
+    if (typeof nombre !== "string" || !nombre.trim() || nombre.length > 160 ||
+        enlace?.protocol !== "https:" || enlace.username || enlace.password) {
+      throw new Error("Cada formato oficial requiere un nombre y una URL HTTPS válida.");
+    }
+    return { nombre: nombre.trim(), url: enlace.href };
+  });
+}
+
 function leerNormativa(texto) {
   const registros = JSON.parse(texto.replace(/^\uFEFF/, ""));
   if (!Array.isArray(registros)) throw new Error("Se esperaba una lista de registros normativos.");
   const resultado = new Map();
   for (const entrada of registros) {
-    const { tramite, programaId, fuente, costos, plazos, procedimiento, observaciones } = entrada ?? {};
+    const { tramite, programaId, fuente, costos, plazos, procedimiento, observaciones, formatos } = entrada ?? {};
     const datos = { fuente, costos, plazos, procedimiento, observaciones };
     const clave = `${tramite}/${programaId}`;
     if (!tipos.has(tramite) || !Number.isSafeInteger(programaId) || programaId < 1 ||
@@ -16,7 +29,7 @@ function leerNormativa(texto) {
         Object.values(datos).some((valor) => valor !== undefined && (typeof valor !== "string" || !valor.trim() || valor.length > 2000))) {
       throw new Error("Hay un registro normativo inválido o duplicado.");
     }
-    resultado.set(clave, datos);
+    resultado.set(clave, { ...datos, ...(formatos === undefined ? {} : { formatos: leerFormatos(formatos) }) });
   }
   return resultado;
 }
@@ -58,8 +71,13 @@ function registrarCatalogo(app, prisma, normativa = new Map()) {
     if (facultadesDemostracion.includes(programa.facultad)) {
       return res.json({ requisitos: programa.plantillasRequisito, demostracion: true });
     }
-    return res.json({ requisitos: programa.plantillasRequisito,
-      ...(programa.configuracionTramite ?? normativa.get(`${tipoTramite}/${id}`)) });
+    const registro = normativa.get(`${tipoTramite}/${id}`);
+    const condiciones = programa.configuracionTramite?.fuente ? programa.configuracionTramite : registro;
+    return res.json({
+      requisitos: programa.plantillasRequisito,
+      ...condiciones,
+      ...(registro?.formatos?.length && { formatos: registro.formatos, fuenteFormatos: registro.fuente }),
+    });
   });
 }
 

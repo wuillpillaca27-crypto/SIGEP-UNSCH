@@ -42,7 +42,7 @@
           { "$ref": "#/components/parameters/ProgramaId" }
         ],
         "responses": {
-          "200": { "description": "Requisitos activos y, si están configurados, datos normativos." },
+          "200": { "description": "Requisitos activos y, si están configurados, datos normativos y formatos HTTPS autorizados. Los programas de demostración se identifican y no publican formatos oficiales." },
           "404": { "$ref": "#/components/responses/NoEncontrado" },
           "default": { "$ref": "#/components/responses/Error" }
         }

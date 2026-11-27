@@ -67,6 +67,17 @@ async function sembrar() {
         const requisito = { programaId: programa.id, tipoTramite: tramite, codigo, tipo: "documental", nombre: "PDF de prueba",
           descripcion: "Adjunta un PDF sin datos personales para comprobar el flujo de demostración.", versionNorm: "Demostración", activo: true };
         if (!heredado) await db.plantillaRequisito.upsert({ where: { codigo }, create: requisito, update: {} });
+        const ejemplos = [
+          { sufijo: "ACADEMICO", tipo: "academico", nombre: "Revisión de créditos de demostración",
+            descripcion: "Ejemplo para consultar el avance en el plan de estudios durante la prueba." },
+          { sufijo: "OPCIONAL", tipo: "documental", nombre: "PDF complementario de demostración",
+            descripcion: "Archivo opcional para probar la carga de documentos adicionales." },
+        ];
+        for (const { sufijo, ...ejemplo } of ejemplos) {
+          const codigoEjemplo = `DEMO-${sufijo}-${tipo}`;
+          await db.plantillaRequisito.upsert({ where: { codigo: codigoEjemplo }, update: {},
+            create: { ...requisito, ...ejemplo, codigo: codigoEjemplo, obligatorio: false } });
+        }
         await cuenta(tipo, indice + 1, "estudiante", programa.id);
       }
       await cuenta("administracion", 10, "administrador");

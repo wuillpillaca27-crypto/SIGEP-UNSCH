@@ -135,3 +135,79 @@
 .panel button:disabled { opacity: .6; cursor: wait; }
 .controles { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
 .etapas li[aria-current="step"] { font-weight: 700; text-decoration: underline; text-underline-offset: 4px; }
+
+.orientacion {
+  width: 100%;
+  max-width: 1360px;
+  gap: clamp(12px, 2vw, 22px);
+}
+.orientacion .hero { padding: clamp(20px, 4vw, 52px); }
+.orientacion .hero h1 { font-size: clamp(1.55rem, 4vw, 3rem); max-width: 28ch; text-wrap: balance; }
+.orientacion .hero p { margin-block: 12px 22px; }
+.orientacion .tarjeta { min-height: 108px; padding: 12px 8px; gap: 5px; }
+.orientacion .tarjeta:hover { box-shadow: 0 4px 16px rgb(80 30 40 / 13%); }
+.orientacion .tarjeta span { font-size: .82rem; }
+.iconoTarjeta {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: #f8edf0;
+}
+.orientacion .recorrido span { width: 38px; height: 38px; margin-bottom: 8px; }
+.catalogo {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: clamp(14px, 3vw, 32px);
+  margin-top: 16px;
+}
+.catalogo h3 { margin: 0 0 12px; font-size: 1.05rem; }
+.documentos { min-width: 0; padding: 16px; border: 1px solid var(--borde); border-radius: 10px; }
+.buscador { display: grid; gap: 6px; font-weight: 650; }
+.buscador > span { position: relative; }
+.buscador svg { position: absolute; inset: 11px auto auto 10px; width: 18px; height: 18px; pointer-events: none; }
+.buscador input {
+  width: 100%;
+  min-height: 42px;
+  padding: 7px 10px 7px 36px;
+  border: 1px solid var(--borde);
+  border-radius: 7px;
+  background: var(--panel);
+  color: inherit;
+  font: inherit;
+  font-weight: 400;
+}
+.itemsCatalogo { margin: 0; padding: 0; list-style: none; }
+.itemsCatalogo li { padding: 12px 0; border-bottom: 1px solid var(--borde); overflow-wrap: anywhere; }
+.itemsCatalogo li > div { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 5px 12px; }
+.itemsCatalogo li span {
+  padding: 2px 8px;
+  background: #f8edf0;
+  border-radius: 12px;
+  color: #651822;
+  font-size: .8rem;
+}
+.itemsCatalogo p { margin: 6px 0; }
+.formatos { margin-top: 16px; overflow-wrap: anywhere; }
+.formatos h4 { margin: 0; }
+.formatos a { font-weight: 650; }
+.avisoDemo { padding: 12px 14px; border-radius: 7px; border-left: 4px solid #c1922e; background: #fcf4de; color: #4c350b; }
+.condiciones {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 10px;
+  margin: 18px 0 0;
+}
+.condiciones > div { padding: 14px; border: 1px solid var(--borde); border-top: 3px solid #c1922e; border-radius: 8px; overflow-wrap: anywhere; }
+.condiciones dt { font-weight: 750; }
+.condiciones dd { margin: 5px 0 0; white-space: pre-line; }
+.preguntas details { margin-top: 6px; }
+.preguntas summary { padding-block: 14px; }
+.preguntas summary::marker { color: #a77615; }
+.preguntas details p { margin: 0 0 12px 16px; }
+@media (max-width: 700px) {
+  .catalogo { grid-template-columns: minmax(0, 1fr); }
+  .orientacion .tarjeta { min-height: 88px; }
+  .orientacion .tarjeta > span:last-child { display: none; }
+}

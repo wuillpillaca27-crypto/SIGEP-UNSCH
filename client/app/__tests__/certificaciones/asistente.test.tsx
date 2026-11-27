@@ -39,6 +39,26 @@ describe("Asistente de certificación", () => {
     expect(solicitudes.opciones).not.toHaveBeenCalled();
   });
 
+  it("conserva el trámite de Doctorado al enviar al visitante al login", async () => {
+    window.history.replaceState({}, "", "/grados-titulos/iniciar-solicitud?tramite=doctor");
+    jest.spyOn(solicitudes, "perfil").mockResolvedValue({ ok: false, estadoHttp: 401, codigo: "SESION_AUSENTE" });
+    render(<AsistenteCertificacion seleccion="doctor" navegar={mockReplace} />);
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith(
+      "/login?continuar=%2Fgrados-titulos%2Finiciar-solicitud%3Ftramite%3Ddoctor",
+    ));
+  });
+
+  it("reintenta una conexión fallida y vuelve al login si no hay sesión", async () => {
+    jest.spyOn(solicitudes, "perfil")
+      .mockResolvedValueOnce({ ok: false, error: "No se pudo conectar con el servidor" })
+      .mockResolvedValueOnce({ ok: false, estadoHttp: 401 });
+    render(<AsistenteCertificacion seleccion="diplomados" navegar={mockReplace} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Reintentar conexión" }));
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith(
+      "/login?continuar=%2Fcertificaciones%2Finiciar-solicitud%3Ftramite%3Ddiplomados",
+    ));
+  });
+
   it("distingue una sesión válida sin matrícula de una sesión ausente", async () => {
     jest.spyOn(solicitudes, "perfil").mockResolvedValue({ ok: true, datos: { ...perfil, estudiante: null } });
     jest.spyOn(solicitudes, "opciones").mockResolvedValue({ ok: true, datos: {
@@ -65,9 +85,9 @@ describe("Asistente de certificación", () => {
       programaRegistrado: programa, motivo: null,
     } });
     render(<AsistenteCertificacion seleccion={clave} navegar={mockReplace} />);
-    expect(await screen.findByRole("heading", { name: "Datos personales y programa" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Datos personales" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Siguiente" }));
     expect(screen.getByLabelText("Trámite disponible")).toHaveValue(tipoTramite);
-    expect(screen.getByText(perfil.dni)).toBeInTheDocument();
   });
 
   it("explica que la matrícula no corresponde a un programa certificable y ofrece ayuda", async () => {
@@ -80,7 +100,7 @@ describe("Asistente de certificación", () => {
     expect(screen.getByRole("link", { name: "Solicitar orientación" })).toHaveAttribute("href", "/ayuda");
   });
 
-  it("presenta los cuatro pasos y crea un borrador del programa seleccionado", async () => {
+  it("presenta los cinco pasos y crea un borrador del programa seleccionado", async () => {
     jest.spyOn(solicitudes, "perfil").mockResolvedValue({ ok: true, datos: perfil });
     jest.spyOn(solicitudes, "opciones").mockResolvedValue({ ok: true, datos: opciones });
     const borrador = {
@@ -90,7 +110,9 @@ describe("Asistente de certificación", () => {
     };
     jest.spyOn(solicitudes, "crear").mockResolvedValue({ ok: true, datos: borrador });
     render(<AsistenteCertificacion seleccion="diplomados" navegar={mockReplace} />);
-    expect(await screen.findByRole("heading", { name: "Datos personales y programa" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Datos personales" })).toBeInTheDocument();
+    expect(screen.getByText(perfil.dni)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Siguiente" }));
     expect(screen.getByLabelText("Programa académico")).toHaveValue("7");
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
     await waitFor(() => expect(solicitudes.crear).toHaveBeenCalledWith("certificado_diplomado", 7));
