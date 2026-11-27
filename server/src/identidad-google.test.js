@@ -24,7 +24,7 @@ test("Google conserva el trámite autorizado en la transacción y rechaza destin
     const iniciarSesion = jest.fn();
     const app = express();
     registrarGoogle(app, {
-      prisma: { usuario: { findFirst: async () => ({ id: 1, rol: "estudiante", estudiante: { id: 7 } }) } },
+      prisma: { usuario: { findFirst: async () => ({ id: 1, rol: "estudiante", estudiantes: [{ id: 7 }] }) } },
       secreto, perfil: {}, opcionesCookie: { httpOnly: true, secure: true },
       leerCookie: (req) => req.get("cookie")?.split("=")[1], iniciarSesion,
     });

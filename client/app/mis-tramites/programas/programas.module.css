@@ -1,0 +1,8 @@
+.tarjetas { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 350px), 1fr)); gap: 14px; }
+.tarjeta { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; border-top: 3px solid #c1922e; }
+.icono { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 9px; background: #f4e6e9; color: #651822; }
+.contenido { overflow-wrap: anywhere; }
+.contenido p { margin: 5px 0 9px; }
+.contenido h2 { margin: 0 0 4px; }
+.estado { padding: 6px 9px; border-radius: 6px; background: #fcf4de; color: #4c350b; }
+.contenido .accion { display: inline-block; margin-top: 5px; padding: 8px 11px; border-radius: 6px; background: #651822; color: #fff; text-decoration: none; font-weight: 700; }

@@ -133,6 +133,7 @@ function Ingreso() {
           ))}
         </div>
         {(error || parametros.get("google") === "error") && <p className={styles.error} role="alert">{error || "No se pudo iniciar sesión con Google. Utiliza tus credenciales de SIGEP."}</p>}
+        {parametros.get("sesion") === "expirada" && !error && <p role="status">Tu sesión expiró. Ingresa de nuevo para continuar tu solicitud.</p>}
         <form className={styles.formulario} onSubmit={ingresar} noValidate aria-busy={ocupado}>
           <label htmlFor="identificador">{modo === "dni" ? "DNI" : "Correo personal"}</label>
           <div className={styles.campo}><Icono nombre={modo === "dni" ? "dni" : "correo"} />
@@ -153,7 +154,7 @@ function Ingreso() {
             </button>
           </div>
           {campos.clave && <p id="error-clave" className={styles.error} role="alert">{campos.clave}</p>}
-          <a className={styles.recuperar} href="https://campus.unsch.edu.pe/recuperar-contrasena" target="_blank" rel="noopener noreferrer">¿Olvidaste tu contraseña?</a>
+          <Link className={styles.recuperar} href="/ayuda#orientacion">¿Olvidaste tu contraseña?</Link>
           <button type="submit" className={styles.ingresar} disabled={ocupado}><Icono nombre="acceso" />{ocupado ? "Ingresando…" : "Ingresar"}</button>
         </form>
         <p className={styles.separador}>o también puedes ingresar con</p>

@@ -13,6 +13,7 @@ const { registrarSolicitudes } = require("./solicitudes");
 const { registrarRevision } = require("./revision-grados");
 const { registrarVerificacion } = require("./verificacion-documentos");
 const { registrarAdministracion } = require("./administracion");
+const { registrarOrientacion } = require("./orientacion");
 
 const url = process.env.DATABASE_URL;
 if (!url?.startsWith("postgresql://")) {
@@ -58,6 +59,7 @@ const directorio = resolve(process.env.SIGEP_UPLOAD_DIR ?? "uploads/documentos")
 registrarSolicitudes(app, prisma, autenticar, directorio);
 registrarRevision(app, prisma, autenticar, directorio);
 registrarAdministracion(app, prisma, autenticar);
+registrarOrientacion(app, prisma, autenticar);
 registrarVerificacion(app, prisma, { demostracion: process.env.SIGEP_DEMOSTRACION === "1" });
 app.use("/api", (_req, res) => res.status(404).json({ codigo: "RUTA_INEXISTENTE", error: "La ruta de la API no existe" }));
 app.use((error, req, res, next) => {

@@ -7,12 +7,13 @@ import {
   descargarDocumento,
   ErrorDocumento,
   estadoVisible,
+  rutaConstancia,
   solicitudes,
   type OpcionesSolicitud,
   type Perfil,
   type Solicitud,
 } from "../solicitudes-api";
-import { esCertificacion } from "../tramites";
+import { esCertificacion, rutaSolicitud } from "../tramites";
 import styles from "../orientacion.module.css";
 import visual from "./asistente.module.css";
 
@@ -30,15 +31,15 @@ const motivos: Record<NonNullable<OpcionesSolicitud["motivo"]>, (programa: strin
   sin_requisitos_activos: (programa) => `${programa} no tiene requisitos activos publicados para su trámite. Solicita a la Escuela de Posgrado que verifique el catálogo autorizado.`,
   tramite_deshabilitado: (programa) => `El trámite de ${programa} está deshabilitado. Consulta con la Escuela de Posgrado.`,
   plantilla_no_publicada: (programa) => `Los requisitos de ${programa} están configurados, pero la plantilla todavía no está publicada.`,
+  matricula_no_habilitada: (programa) => `La matrícula de ${programa} no está habilitada para solicitar este trámite. Consulta su estado con la Escuela de Posgrado.`,
 };
 
-export default function Asistente({ seleccion, certificaciones = false, navegar = navegarAlLogin }: {
-  seleccion?: string; certificaciones?: boolean; navegar?: (destino: string) => void;
+export default function Asistente({ seleccion, programaInicial, certificaciones = false, navegar = navegarAlLogin }: {
+  seleccion?: string; programaInicial?: string; certificaciones?: boolean; navegar?: (destino: string) => void;
 }) {
   const [perfil, setPerfil] = useState<Perfil>();
   const [opciones, setOpciones] = useState<OpcionesSolicitud>();
   const [programaId, setProgramaId] = useState("");
-  const [tipoTramite, setTipoTramite] = useState("");
   const [solicitud, setSolicitud] = useState<Solicitud>();
   const [paso, setPaso] = useState(0);
   const [cargando, setCargando] = useState(true);
@@ -47,10 +48,14 @@ export default function Asistente({ seleccion, certificaciones = false, navegar 
   const [error, setError] = useState("");
   const [mensaje, setMensaje] = useState("");
 
-  const programa = opciones?.programas.find((item) => String(item.id) === programaId);
-  const tramite = programa?.tramites.find((item) => item.tipoTramite === tipoTramite);
-  const otroTramite = opciones?.programas.flatMap((item) => item.tramites).find(({ clave }) =>
-    seleccion ? clave !== seleccion : esCertificacion(clave) !== certificaciones);
+  const compatibles = (opciones?.programas ?? []).filter(({ tramites }) => tramites.some(({ clave }) =>
+    seleccion ? clave === seleccion : esCertificacion(clave) === certificaciones));
+  const programaSeleccionado = programaId ? compatibles.find((item) => String(item.id) === programaId) : undefined;
+  const programa = programaSeleccionado ?? (compatibles.length === 1 ? compatibles[0] : undefined);
+  const programaIdVisible = programa ? String(programa.id) : "";
+  const tramite = (programa ?? compatibles[0])?.tramites.find(({ clave }) => seleccion ? clave === seleccion : esCertificacion(clave) === certificaciones);
+  const alternativas = opciones?.programas.flatMap((item) => item.tramites.map((disponible) => ({ ...disponible, programa: item })));
+  const registro = opciones?.matriculas?.find((item) => item.id === programa?.id);
 
   useEffect(() => {
     let vigente = true;
@@ -81,17 +86,12 @@ export default function Asistente({ seleccion, certificaciones = false, navegar 
         return;
       }
       setOpciones(elegibilidad.datos);
-      const inicial = elegibilidad.datos.programas[0];
-      if (inicial) {
-        setProgramaId(String(inicial.id));
-        const tramiteInicial = inicial.tramites.find(({ clave }) => seleccion ? clave === seleccion : esCertificacion(clave) === certificaciones);
-        setTipoTramite(tramiteInicial?.tipoTramite ?? "");
-      }
+      setProgramaId(programaInicial ?? "");
       setCargando(false);
     }
     void cargar();
     return () => { vigente = false; };
-  }, [navegar, seleccion, certificaciones, intento]);
+  }, [navegar, seleccion, certificaciones, programaInicial, intento]);
 
   const documentosPendientes = useMemo(() => {
     if (!solicitud) return [];
@@ -140,7 +140,11 @@ export default function Asistente({ seleccion, certificaciones = false, navegar 
   if (cargando) return <section className={styles.panel} role="status">Verificando sesión y programas asociados a tu matrícula…</section>;
 
   const programaRegistrado = opciones?.programaRegistrado;
-  const textoMotivo = opciones?.motivo ? motivos[opciones.motivo](programaRegistrado?.nombre ?? "registrado") : "";
+  const bloqueada = opciones?.matriculas?.find((item) => item.motivo &&
+    (!programaId || String(item.id) === programaId) &&
+    (seleccion ? item.claveTramite === seleccion : esCertificacion(item.claveTramite) === certificaciones));
+  const motivo = bloqueada?.motivo ?? opciones?.motivo;
+  const textoMotivo = motivo ? motivos[motivo](bloqueada?.nombre ?? programaRegistrado?.nombre ?? "registrado") : "";
 
   return (
     <section className={styles.panel} aria-busy={ocupado}>
@@ -154,21 +158,14 @@ export default function Asistente({ seleccion, certificaciones = false, navegar 
         }}>Reintentar conexión</button>
       )}
       {mensaje && <p role="status">{mensaje}</p>}
-      {opciones?.motivo && (
+      {opciones && !compatibles.length && (
         <div className={visual.aviso} role="status">
-          <h3>No hay un trámite habilitado para tu matrícula</h3>
-          <p>{textoMotivo}</p>
-          <p>La oferta solo se habilita cuando el programa y sus requisitos están registrados y activos.</p>
-          <Link href="/ayuda">Solicitar orientación</Link>
-        </div>
-      )}
-      {otroTramite && !tramite && (
-        <div className={visual.aviso} role="status">
-          <h3>El trámite solicitado no corresponde a tu matrícula</h3>
-          <p>Tu programa registrado es {programaRegistrado?.nombre}.</p>
-          <p><Link href={`/${esCertificacion(otroTramite.clave) ? "certificaciones" : "grados-titulos"}/iniciar-solicitud?tramite=${otroTramite.clave}`}>
-            Ir a {otroTramite.nombre}
-          </Link></p>
+          <h3>{textoMotivo ? "No hay un trámite habilitado para tu matrícula" : "El trámite solicitado no corresponde a tu matrícula"}</h3>
+          <p>{textoMotivo || (programaRegistrado && (opciones.matriculas?.length ?? 1) === 1
+            ? `Tu programa registrado es ${programaRegistrado.nombre}.` : "No hay una matrícula habilitada para el trámite seleccionado.")}</p>
+          {!!alternativas?.length && <ul>{alternativas.map((item) => <li key={`${item.programa.id}/${item.clave}`}>
+            <Link href={rutaSolicitud(item.clave, item.programa.id)}>{item.nombre} · {item.programa.nombre}</Link>
+          </li>)}</ul>}
           <Link href="/ayuda">Solicitar orientación</Link>
         </div>
       )}
@@ -185,7 +182,7 @@ export default function Asistente({ seleccion, certificaciones = false, navegar 
           <h3>{pasos[paso]}</h3>
           {paso === 0 && (
               <dl className={styles.datos}>
-                <div><dt>Código universitario</dt><dd>{perfil.estudiante?.codigoUniv}</dd></div>
+                <div><dt>Código universitario</dt><dd>{registro?.codigoUniv ?? perfil.estudiante?.codigoUniv}</dd></div>
                 <div><dt>Nombres y apellidos</dt><dd>{perfil.nombres} {perfil.apellidos}</dd></div>
                 <div><dt>DNI</dt><dd>{perfil.dni}</dd></div>
                 <div><dt>Correo electrónico</dt><dd>{perfil.email}</dd></div>
@@ -194,23 +191,22 @@ export default function Asistente({ seleccion, certificaciones = false, navegar 
           {paso === 1 && (
             <div className={`${styles.formulario} ${visual.seleccion}`}>
               <label>Programa académico
-                <select value={programaId} onChange={(evento) => {
+                <select value={programaIdVisible} disabled={ocupado || compatibles.length === 1} onChange={(evento) => {
                   setProgramaId(evento.target.value);
-                  const siguiente = opciones.programas.find((item) => String(item.id) === evento.target.value);
-                  setTipoTramite(siguiente?.tramites.find(({ clave }) => seleccion ? clave === seleccion : esCertificacion(clave) === certificaciones)?.tipoTramite ?? "");
                   setSolicitud(undefined);
                 }}>
-                  {opciones.programas.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                  {compatibles.length > 1 && <option value="">Selecciona un programa compatible</option>}
+                  {compatibles.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
                 </select>
               </label>
               <label>Trámite disponible
-                <select value={tipoTramite} onChange={(evento) => { setTipoTramite(evento.target.value); setSolicitud(undefined); }}>
+                <select value={tramite.tipoTramite} disabled>
                   <option value={tramite.tipoTramite}>{tramite.nombre}</option>
                 </select>
               </label>
               <div className={styles.controles}>
-                <button type="button" disabled={ocupado} onClick={() => void ejecutar(() => guardarBorrador(true))}>Continuar</button>
-                <button type="button" disabled={ocupado} onClick={() => void ejecutar(() => guardarBorrador())}>Guardar borrador</button>
+                <button type="button" disabled={ocupado || !programa} onClick={() => void ejecutar(() => guardarBorrador(true))}>Continuar</button>
+                <button type="button" disabled={ocupado || !programa} onClick={() => void ejecutar(() => guardarBorrador())}>Guardar borrador</button>
               </div>
             </div>
           )}
@@ -235,7 +231,16 @@ export default function Asistente({ seleccion, certificaciones = false, navegar 
                       if (archivo) void ejecutar(async () => setSolicitud(await cargarDocumento(solicitud.id, plantilla.id, archivo)));
                     }} />
                   </label>
-                  {documento && <button type="button" disabled={ocupado} onClick={() => void ejecutar(() => descargarDocumento(solicitud.id, documento.id, false, true))}>Visualizar PDF</button>}
+                  {documento && <div className={styles.controles}>
+                    <button type="button" disabled={ocupado} onClick={() => void ejecutar(() => descargarDocumento(solicitud.id, documento.id, false, true))}>Visualizar PDF</button>
+                    <button type="button" disabled={ocupado} onClick={() => void ejecutar(async () => {
+                      const respuesta = await solicitudes.retirarDocumento(solicitud.id, documento.id);
+                      if (redirigirSiVence(respuesta.estadoHttp, respuesta.codigo)) return;
+                      if (!respuesta.datos) throw new Error(respuesta.error ?? "No se pudo retirar el archivo.");
+                      setSolicitud(respuesta.datos);
+                      setMensaje("Archivo retirado del borrador.");
+                    })}>Retirar PDF</button>
+                  </div>}
                 </div>;
               })}
               {!solicitud.validaciones.some(({ plantilla }) => plantilla.tipo === "documental") && <p>No hay documentos publicados para este trámite.</p>}
@@ -263,13 +268,14 @@ export default function Asistente({ seleccion, certificaciones = false, navegar 
             </>
           )}
           <div className={styles.controles}>
+            <Link href="/mis-tramites/solicitudes">Cancelar y salir</Link>
             {paso > 0 && <button type="button" disabled={ocupado} onClick={() => setPaso(paso - 1)}>Anterior</button>}
             {paso !== 1 && paso < 4 && <button type="button" disabled={ocupado} onClick={() => setPaso(paso + 1)}>Siguiente</button>}
             {paso > 1 && <button type="button" disabled={ocupado} onClick={() => void ejecutar(() => guardarBorrador())}>Guardar borrador</button>}
           </div>
         </>
       )}
-      {solicitud?.presentadoEn && <p role="status">Solicitud presentada. Expediente <strong>{solicitud.codigo}</strong>. <Link href={`/mis-tramites/expedientes#expediente-${solicitud.id}`}>Consultar expediente en Mis Trámites</Link></p>}
+      {solicitud?.presentadoEn && <p role="status">Solicitud presentada. Expediente <strong>{solicitud.codigo}</strong>. <Link href={`/mis-tramites/expedientes#expediente-${solicitud.id}`}>Consultar expediente en Mis Trámites</Link> · <a href={rutaConstancia(solicitud.id)}>Descargar acuse</a></p>}
       {programaRegistrado && opciones?.motivo && <small>Programa matriculado: {programaRegistrado.nombre} · estado {programaRegistrado.activo ? "activo" : "inactivo"}.</small>}
     </section>
   );

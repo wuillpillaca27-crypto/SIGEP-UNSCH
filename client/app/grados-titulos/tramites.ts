@@ -53,3 +53,10 @@ export function esCertificacion(valor: string): valor is Certificacion {
 export function esTramite(valor: string): valor is Tramite {
   return Object.hasOwn(tramites, valor);
 }
+
+export function rutaSolicitud(clave: string, programa?: number) {
+  const base = esCertificacion(clave) ? "/certificaciones" : "/grados-titulos";
+  const parametros = new URLSearchParams({ tramite: clave });
+  if (programa !== undefined) parametros.set("programa", String(programa));
+  return `${base}/iniciar-solicitud?${parametros}`;
+}

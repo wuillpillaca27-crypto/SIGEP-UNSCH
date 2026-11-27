@@ -18,10 +18,12 @@ export default function Sesion({ children }: { children: ReactNode }) {
     solicitudes.perfil().then((respuesta) => {
       if (!vigente) return;
       const cuenta = respuesta.datos;
-      const estudiante = cuenta?.rol === "estudiante" && cuenta.estudiante ? cuenta : null;
+      const tieneMatriculas = Boolean(cuenta?.estudiantes?.length || cuenta?.estudiante);
+      const estudiante = cuenta?.rol === "estudiante" && tieneMatriculas ? cuenta : null;
       setPerfil(estudiante);
-      if (cuenta && !estudiante) setError("Usa una cuenta de estudiante para acceder.");
-      else if (!respuesta.ok && respuesta.estadoHttp !== 401) setError(respuesta.error ?? "No se pudo verificar la sesión.");
+      if (cuenta?.rol === "estudiante" && !cuenta.estudiante) setError("Tu cuenta no tiene una matrícula vinculada. Solicita orientación a la Escuela de Posgrado.");
+      else if (cuenta && !estudiante) setError("Usa una cuenta de estudiante para acceder.");
+      else if (!respuesta.ok && respuesta.codigo !== "SESION_AUSENTE") setError(respuesta.error ?? "No se pudo verificar la sesión.");
     });
     return () => { vigente = false; };
   }, [intento]);
@@ -35,7 +37,8 @@ export default function Sesion({ children }: { children: ReactNode }) {
       const resultado = await solicitudes.ingresar(String(formulario.get("usuario")).trim(), String(formulario.get("password")));
       const datos = resultado.datos;
       if (!datos) setError(resultado.error ?? "No se pudo iniciar sesión.");
-      else if (datos.usuario.rol !== "estudiante" || !datos.usuario.estudiante) setError("Usa una cuenta de estudiante para acceder.");
+      else if (datos.usuario.rol !== "estudiante") setError("Usa una cuenta de estudiante para acceder.");
+      else if (!datos.usuario.estudiante) setError("Tu cuenta no tiene una matrícula vinculada. Solicita orientación a la Escuela de Posgrado.");
       else {
         setPerfil(datos.usuario);
       }

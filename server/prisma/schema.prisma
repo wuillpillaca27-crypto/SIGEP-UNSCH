@@ -28,12 +28,13 @@ model Usuario {
   actualizadoEn DateTime @updatedAt
 
   // Relaciones
-  estudiante    Estudiante?
+  estudiantes   Estudiante[]
   solicitudes   Solicitud[]   @relation("SolicitudEstudiante")
   revisiones    Revision[]    @relation("RevisionRevisor")
   auditorias    Auditoria[]
   validaciones  ValidacionRequisito[] @relation("ValidacionResponsable")
   cambiosAcademicos CambioAcademico[]
+  orientacionesRespondidas ConsultaOrientacion[]
   documentosSubidos DocumentoSolicitud[] @relation("DocumentoSubidoPor")
 
   @@map("usuarios")
@@ -108,11 +109,14 @@ enum TipoPrograma {
 
 model Estudiante {
   id           Int       @id @default(autoincrement())
-  usuarioId    Int       @unique
+  usuarioId    Int
   codigoUniv   String    @unique
   programaId   Int
   telefono     String?
   estadoAcad   EstadoAcademico @default(activo)
+  fechaInicio  DateTime @default(now())
+  fechaFin     DateTime?
+  habilitadoTramites Boolean @default(true)
   creditosAprobados Int  @default(0)
   promedioGeneral   Float @default(0)
   creadoEn     DateTime  @default(now())
@@ -122,6 +126,7 @@ model Estudiante {
   programa   Programa  @relation(fields: [programaId], references: [id])
   solicitudes Solicitud[]
 
+  @@unique([usuarioId, programaId])
   @@map("estudiantes")
 }
 
@@ -255,6 +260,7 @@ enum EstadoValidacion {
 // ══════════════════════════════════════════════════════════════
 
 model DocumentoSolicitud {
+  retiradoEn DateTime?
   id           Int      @id @default(autoincrement())
   solicitudId  Int
   nombre       String
@@ -271,6 +277,25 @@ model DocumentoSolicitud {
   subidoByUser Usuario @relation("DocumentoSubidoPor", fields: [subidoPor], references: [id])
 
   @@map("documentos_solicitud")
+}
+
+model ConsultaOrientacion {
+  id Int @id @default(autoincrement())
+  codigo String @unique
+  nombres String
+  correo String
+  tipoTramite TipoTramite?
+  programa String
+  asunto String
+  descripcion String
+  creadoEn DateTime @default(now())
+  respuesta String?
+  respondidaEn DateTime?
+  respondidaPorId Int?
+  respondidaPor Usuario? @relation(fields: [respondidaPorId], references: [id])
+
+  @@index([creadoEn, id])
+  @@map("consultas_orientacion")
 }
 
 // ══════════════════════════════════════════════════════════════

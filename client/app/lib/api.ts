@@ -15,11 +15,17 @@ async function peticion<T>(
 
   try {
     const res = await fetch(`${API_URL}${endpoint}`, { ...opciones, headers, credentials: "same-origin" });
-    const json = await res.json();
+    const json = await res.json().catch(() => undefined);
 
     if (!res.ok) {
-      return { ok: false, estadoHttp: res.status, error: json?.detail ?? json?.error ?? "Error del servidor" };
+      const error = json?.detail ?? json?.error ?? (
+        json === undefined && res.status >= 500
+          ? "El portal no recibe una respuesta válida de la API. Reintenta en unos instantes."
+          : "Error del servidor"
+      );
+      return { ok: false, estadoHttp: res.status, error, ...(json?.codigo ? { codigo: json.codigo } : {}) };
     }
+    if (json === undefined) return { ok: false, estadoHttp: res.status, error: "La API devolvió una respuesta con formato inesperado." };
 
     return { ok: true, datos: json };
   } catch {

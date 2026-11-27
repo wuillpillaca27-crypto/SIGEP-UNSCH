@@ -19,6 +19,7 @@ type Cuenta = { nombres: string; apellidos: string; dni: string; email: string; 
 type Fila = Partial<Cuenta> & {
   id: number; codigo?: string; nombre?: string; tipo?: string; facultad?: string; codigoUniv?: string;
   estadoAcad?: string; accion?: string; entidadId?: number; creadoEn?: string; versionNorm?: string;
+  fechaInicio?: string; fechaFin?: string | null; habilitadoTramites?: boolean;
   programa?: { nombre: string }; usuario?: Cuenta;
 };
 type Programa = { id: number; nombre: string; activo: boolean };
@@ -35,7 +36,8 @@ export default function Gestion({ seccion }: { seccion: Seccion }) {
   const [error, setError] = useState("");
   const [mensaje, setMensaje] = useState("");
   const editable = perfil?.rol === "administrador" && ["programas", "usuarios", "requisitos"].includes(seccion);
-  const requiereProgramas = editable && seccion !== "programas";
+  const gestionaMatriculas = perfil?.rol === "administrador" && seccion === "estudiantes";
+  const requiereProgramas = (editable && seccion !== "programas") || gestionaMatriculas;
 
   useEffect(() => {
     let activo = true;
@@ -70,6 +72,25 @@ export default function Gestion({ seccion }: { seccion: Seccion }) {
     } finally { setOcupado(false); }
   }
 
+  async function guardarMatricula(evento: FormEvent<HTMLFormElement>, id?: number) {
+    evento.preventDefault();
+    const formulario = evento.currentTarget;
+    const campos = new FormData(formulario);
+    const datos = { ...Object.fromEntries(campos), habilitadoTramites: campos.has("habilitadoTramites") };
+    setOcupado(true);
+    setError("");
+    setMensaje("");
+    try {
+      const respuesta = id ? await api.patch(`/administracion/matriculas/${id}`, datos)
+        : await api.post("/administracion/matriculas", datos);
+      if (respuesta.ok) {
+        if (!id) { formulario.reset(); setPagina(1); }
+        setVersion((previa) => previa + 1);
+        setMensaje("Matrícula guardada.");
+      } else setError(respuesta.error ?? "No se pudo guardar la matrícula.");
+    } finally { setOcupado(false); }
+  }
+
   const listado = resultado && !Array.isArray(resultado) && "datos" in resultado && Array.isArray(resultado.datos) ? resultado : undefined;
   const filas: Fila[] | undefined = Array.isArray(resultado) ? resultado : Array.isArray(listado?.datos) ? listado.datos : undefined;
   const selectorPrograma = <label>Programa<select name="programaId" required defaultValue=""><option value="">Selecciona un programa activo</option>{programas.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select></label>;
@@ -79,6 +100,15 @@ export default function Gestion({ seccion }: { seccion: Seccion }) {
       {error && <p role="alert">{error}</p>}
       {mensaje && <p role="status">{mensaje}</p>}
       {seccion === "estudiantes" && perfil?.rol === "administrador" && <Link href="/admin/usuarios">Registrar estudiante</Link>}
+      {gestionaMatriculas && <section className={styles.panel}><h2>Asignar programa a una cuenta existente</h2>
+        <form className={styles.formulario} onSubmit={guardarMatricula}>
+          <label>DNI de la cuenta<input name="dni" required inputMode="numeric" pattern="[0-9]{8}" maxLength={8} /></label>
+          <label>Código universitario de la matrícula<input name="codigoUniv" required maxLength={40} /></label>
+          {selectorPrograma}
+          <CamposMatricula />
+          <button disabled={ocupado}>Asignar programa</button>
+        </form>
+      </section>}
       {editable && (
         <section className={styles.panel}><h2>Nuevo registro</h2>
           <form className={styles.formulario} onSubmit={guardar}>
@@ -102,6 +132,8 @@ export default function Gestion({ seccion }: { seccion: Seccion }) {
               <label>Nombre<input name="nombre" required maxLength={160} /></label>
               <label>Descripción<textarea name="descripcion" required maxLength={2000} /></label>
               <label>Referencia normativa<input name="versionNorm" required maxLength={100} /></label>
+              <label>Obligatoriedad<select name="obligatorio"><option value="true">Obligatorio</option><option value="false">Opcional</option></select></label>
+              <label>Publicación<select name="activo"><option value="false">Guardar sin publicar</option><option value="true">Publicar</option></select></label>
               <label>Tipo<select name="tipo" required><option value="documental">Documental</option><option value="academico">Académico</option><option value="idioma">Idioma</option><option value="pago">Pago</option><option value="otro">Otro</option></select></label>
             </>}
             <button type="submit" disabled={ocupado}>{ocupado ? "Guardando…" : "Guardar registro"}</button>
@@ -118,6 +150,12 @@ export default function Gestion({ seccion }: { seccion: Seccion }) {
             <p>{[fila.codigoUniv, fila.programa?.nombre, fila.facultad, fila.tipo, fila.codigo, fila.versionNorm, fila.estadoAcad,
               seccion !== "auditoria" && cuenta.dni, seccion === "usuarios" && cuenta.email, seccion === "usuarios" && cuenta.rol,
               fila.accion, fila.entidadId && `Expediente ${fila.entidadId}`, fila.creadoEn && new Date(fila.creadoEn).toLocaleString("es-PE")].filter(Boolean).join(" · ")}</p>
+            {gestionaMatriculas && <details><summary>Editar matrícula</summary>
+              <form key={version} className={styles.formulario} onSubmit={(evento) => guardarMatricula(evento, fila.id)}>
+                <CamposMatricula fila={fila} />
+                <button disabled={ocupado}>Actualizar matrícula</button>
+              </form>
+            </details>}
           </li>;
         })}</ul>}
         {seccion === "configuracion" && resultado && <dl>{Object.entries(resultado).map(([etiqueta, valor]) => (
@@ -131,4 +169,16 @@ export default function Gestion({ seccion }: { seccion: Seccion }) {
       </section>
     </main>
   );
+}
+
+function CamposMatricula({ fila }: { fila?: Fila }) {
+  return <>
+    <label>Estado académico<select name="estadoAcad" defaultValue={fila?.estadoAcad ?? "activo"}>
+      <option value="activo">Activo</option><option value="egresado">Egresado</option><option value="graduado">Graduado</option>
+      <option value="suspendido">Suspendido</option><option value="retirado">Retirado</option>
+    </select></label>
+    <label>Fecha de inicio<input type="date" name="fechaInicio" required defaultValue={fila?.fechaInicio?.slice(0, 10)} /></label>
+    <label>Fecha de fin<input type="date" name="fechaFin" defaultValue={fila?.fechaFin?.slice(0, 10)} /></label>
+    <label><span><input type="checkbox" name="habilitadoTramites" defaultChecked={fila?.habilitadoTramites ?? true} /> Habilitar trámites</span></label>
+  </>;
 }

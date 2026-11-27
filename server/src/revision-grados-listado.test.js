@@ -112,12 +112,12 @@ describe("Listados y reporte de revisión", () => {
     expect((await ctx.pedir("/revision-grados?pagina=2x", operador)).body.datos).toHaveLength(5);
   });
 
-  test("restringe listado y reporte al personal y habilita aprobar solo al administrador", async () => {
+  test("restringe listado y reporte al personal y no concede aprobación al administrador técnico", async () => {
     const admin = await ctx.token(2);
     const estudiante = await ctx.token(3);
     const listado = await ctx.pedir("/revision-grados", admin);
     expect(listado.status).toBe(200);
-    expect(listado.body.puedeAprobar).toBe(true);
+    expect(listado.body.puedeAprobar).toBe(false);
     expect((await ctx.pedir("/revision-grados/reporte", admin)).status).toBe(200);
     expect((await ctx.pedir("/revision-grados", estudiante)).status).toBe(403);
     expect((await ctx.pedir("/revision-grados/reporte", estudiante)).status).toBe(403);

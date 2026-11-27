@@ -20,7 +20,7 @@ const TIPOS: { value: TipoDocumento; label: string }[] = [
 ];
 
 type Consulta = { codigo: string; tipo: string };
-type Resultado = { consulta: Consulta; documento?: DocumentoVerificado; error?: "no-encontrado" | "error-servidor" | "invalido" };
+type Resultado = { consulta: Consulta; documento?: DocumentoVerificado; error?: "no-encontrado" | "error-servidor" | "invalido"; mensaje?: string };
 
 function extraerCodigo(texto: string) {
   const valor = texto.trim();
@@ -58,7 +58,7 @@ function Verificador({ inicial }: { inicial: string }) {
     documentosService.verificarQr(consulta.codigo, consulta.tipo).then((respuesta) => {
       if (!activa) return;
       const error = respuesta.estadoHttp === 404 ? "no-encontrado" : respuesta.estadoHttp === 400 ? "invalido" : "error-servidor";
-      setResultado(respuesta.datos ? { consulta, documento: respuesta.datos } : { consulta, error });
+      setResultado(respuesta.datos ? { consulta, documento: respuesta.datos } : { consulta, error, mensaje: respuesta.error });
     });
     return () => { activa = false; };
   }, [consulta, valido]);
@@ -175,9 +175,8 @@ function Verificador({ inicial }: { inicial: string }) {
 
           {estado === "error-servidor" && (
             <div className="alerta alerta-error verificar-resultado" role="alert">
-              <strong>Error de conexión.</strong>{" "}
-              No fue posible conectar con el servidor de verificación. Por favor, inténtalo
-              en unos minutos.
+              <strong>No se pudo verificar el documento.</strong>{" "}
+              {vigente?.mensaje ?? "Inténtalo de nuevo en unos minutos."}
             </div>
           )}
 

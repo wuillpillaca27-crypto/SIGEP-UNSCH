@@ -14,10 +14,10 @@ async function crearContexto() {
   const fixture = await crearBasePostgresSuite(__filename);
   const { prisma } = fixture;
   const roles = new Map([["operador=operador", 3], ["administrador=administrador", 4], ["estudiante=estudiante", 1]]);
-  const autenticar = (req, res, next) => {
+  const autenticar = async (req, res, next) => {
     const id = roles.get(req.headers.cookie);
     if (!id) return res.status(401).json({ error: "No autorizado" });
-    req.usuario = { id: Number(id), rol: req.headers.cookie.split("=")[0] };
+    req.usuario = await prisma.usuario.findUnique({ where: { id }, select: { id: true, rol: true, puedeAprobar: true } });
     return next();
   };
   const app = express();
@@ -54,11 +54,12 @@ async function crearContexto() {
     });
     await fixture.sincronizarSecuencias();
   }
-  async function pedir(ruta, { rol, metodo = "GET", datos, sinJson } = {}) {
+  async function pedir(ruta, { rol, metodo = "GET", datos, sinJson, pdf } = {}) {
     const response = await fetch(api + ruta, {
       method: metodo,
-      headers: { Connection: "close", ...(rol ? { Cookie: `${rol}=${rol}` } : {}), ...(datos !== undefined && { "Content-Type": "application/json" }) },
-      body: datos !== undefined ? JSON.stringify(datos) : undefined,
+      headers: { Connection: "close", ...(rol ? { Cookie: `${rol}=${rol}` } : {}), ...(datos !== undefined && { "Content-Type": "application/json" }),
+        ...(pdf && { "Content-Type": "application/pdf", "X-Sigep-Referencia": encodeURIComponent("Resolución 123") }) },
+      body: pdf ?? (datos !== undefined ? JSON.stringify(datos) : undefined),
     });
     const texto = await response.text();
     let body = texto;
@@ -99,26 +100,37 @@ describe("Acciones de revisión", () => {
     expect(estado.estado).toBe("observado");
     expect(validacion).toMatchObject({ estado: "cumplido", evidencia: "Documento verificado", validadoPor: 3 });
     expect(await ctx.prisma.historialEstado.findMany({ where: { solicitudId: 1 }, select: { estadoAntes: true, estadoDespues: true, motivo: true } })).toEqual([
-      { estadoAntes: "presentado", estadoDespues: "en_revision", motivo: null },
+      { estadoAntes: "presentado", estadoDespues: "en_revision", motivo: "revisar" },
       { estadoAntes: "en_revision", estadoDespues: "observado", motivo: "Adjuntar archivo legible" },
     ]);
     expect(await ctx.prisma.revision.count({ where: { solicitudId: 1 } })).toBe(3);
     expect(await ctx.prisma.auditoria.count({ where: { entidadId: 1 } })).toBe(3);
   });
 
-  test("aprueba y emite con administrador y conserva los registros de cada transición", async () => {
-    const aprobar = await ctx.pedir("/revision-grados/3/acciones", { rol: "administrador", metodo: "POST", datos: { accion: "aprobar" } });
+  test("aprueba y emite con autorización explícita y conserva cada transición", async () => {
+    await ctx.prisma.usuario.updateMany({ where: { rol: "administrador" }, data: { puedeAprobar: true } });
+    const ejecutar = (accion, comentario) => ctx.pedir("/revision-grados/3/acciones", { rol: "administrador", metodo: "POST", datos: { accion, comentario } });
+    expect((await ejecutar("finalizar_validacion")).body.estado).toBe("validado");
+    expect((await ejecutar("remitir")).body.estado).toBe("pendiente_aprobacion");
+    const aprobar = await ejecutar("aprobar", "Resolución de prueba");
     expect(aprobar.status).toBe(200);
     expect(aprobar.body.estado).toBe("aprobado");
-    const emitir = await ctx.pedir("/revision-grados/3/acciones", { rol: "administrador", metodo: "POST", datos: { accion: "emitir", comentario: " Resolución 123 " } });
+    expect((await ejecutar("preparar_emision", "Preparación")).body.estado).toBe("en_emision");
+    const emitir = await ctx.pedir("/revision-grados/3/acciones", {
+      rol: "administrador", metodo: "POST", pdf: Buffer.from("%PDF-1.7\n%%EOF\n"),
+    });
     expect(emitir.status).toBe(200);
     expect(emitir.body.estado).toBe("emitido");
+    expect(emitir.body.documentos).toEqual(expect.arrayContaining([expect.objectContaining({ tipoDoc: "documento_emitido" })]));
     expect(await ctx.prisma.historialEstado.findMany({ where: { solicitudId: 3 }, select: { estadoAntes: true, estadoDespues: true, motivo: true } })).toEqual([
-      { estadoAntes: "en_revision", estadoDespues: "aprobado", motivo: null },
-      { estadoAntes: "aprobado", estadoDespues: "emitido", motivo: "Resolución 123" },
+      { estadoAntes: "en_revision", estadoDespues: "validado", motivo: "finalizar_validacion" },
+      { estadoAntes: "validado", estadoDespues: "pendiente_aprobacion", motivo: "remitir" },
+      { estadoAntes: "pendiente_aprobacion", estadoDespues: "aprobado", motivo: "Resolución de prueba" },
+      { estadoAntes: "aprobado", estadoDespues: "en_emision", motivo: "Preparación" },
+      { estadoAntes: "en_emision", estadoDespues: "emitido", motivo: "Resolución 123" },
     ]);
-    expect(await ctx.prisma.revision.count({ where: { solicitudId: 3 } })).toBe(2);
-    expect(await ctx.prisma.auditoria.count({ where: { entidadId: 3 } })).toBe(2);
+    expect(await ctx.prisma.revision.count({ where: { solicitudId: 3 } })).toBe(5);
+    expect(await ctx.prisma.auditoria.count({ where: { entidadId: 3 } })).toBe(5);
   });
 
   test("rechaza ID y entradas inválidas con el error de validación vigente", async () => {
@@ -135,8 +147,8 @@ describe("Acciones de revisión", () => {
     }
   });
 
-  test("bloquea aprobar si falta un requisito obligatorio y reserva aprobar y emitir al administrador", async () => {
-    const bloqueada = await ctx.pedir("/revision-grados/2/acciones", { rol: "administrador", metodo: "POST", datos: { accion: "aprobar" } });
+  test("bloquea cerrar validación sin requisitos y reserva aprobación y emisión a personal habilitado", async () => {
+    const bloqueada = await ctx.pedir("/revision-grados/2/acciones", { rol: "operador", metodo: "POST", datos: { accion: "finalizar_validacion" } });
     expect(bloqueada.status).toBe(409);
     const operadorAprueba = await ctx.pedir("/revision-grados/3/acciones", { rol: "operador", metodo: "POST", datos: { accion: "aprobar" } });
     expect(operadorAprueba.status).toBe(403);

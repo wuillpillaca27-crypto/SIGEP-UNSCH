@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { cargarDocumento, descargarDocumento, estadoVisible, solicitudes, type Solicitud } from "../../grados-titulos/solicitudes-api";
-import { esCertificacion, tramitesAcademicos } from "../../grados-titulos/tramites";
+import { cargarDocumento, descargarDocumento, estadoVisible, rutaConstancia, solicitudes, type Solicitud } from "../../grados-titulos/solicitudes-api";
+import { rutaSolicitud, tramitesAcademicos } from "../../grados-titulos/tramites";
 import styles from "../../grados-titulos/orientacion.module.css";
 
 const vistas = {
@@ -23,6 +23,7 @@ export default function Seguimiento({ vista }: { vista: keyof typeof vistas }) {
   const [ocupado, setOcupado] = useState(false);
   const [aviso, setAviso] = useState("");
   const [busqueda, setBusqueda] = useState("");
+  const [estado, setEstado] = useState("");
   const [reintento, setReintento] = useState(0);
   const [sesionVencida, setSesionVencida] = useState(false);
   const destinoAtendido = useRef("");
@@ -92,6 +93,7 @@ export default function Seguimiento({ vista }: { vista: keyof typeof vistas }) {
   const normalizar = (texto: string) => texto.toLocaleLowerCase("es").normalize("NFD").replace(/\p{Diacritic}/gu, "");
   const consulta = normalizar(busqueda.trim());
   const expedientes = lista?.filter((item) => {
+    if (estado && item.estado !== estado) return false;
     if (observados && item.estado !== "observado") return false;
     if (!observados && vista !== "solicitudes" && !item.presentadoEn) return false;
     const tipo = Object.values(tramitesAcademicos).find(({ tipo }) => tipo === item.tipoTramite);
@@ -122,8 +124,13 @@ export default function Seguimiento({ vista }: { vista: keyof typeof vistas }) {
         <label>Buscar por código, programa o trámite
           <input type="search" value={busqueda} onChange={(evento) => setBusqueda(evento.target.value)} />
         </label>
+        {!observados && <label>Filtrar por estado<select value={estado} onChange={(evento) => setEstado(evento.target.value)}>
+          <option value="">Todos los estados</option>
+          {[...new Set(lista.filter((item) => vista === "solicitudes" || item.presentadoEn).map((item) => item.estado))].map((valor) =>
+            <option key={valor} value={valor}>{estadoVisible(valor)}</option>)}
+        </select></label>}
       </div></section>}
-      {(movimientos ?? expedientes)?.length === 0 && !errorConsulta && <p>{consulta ? "No hay resultados para esta búsqueda." : vacio}</p>}
+      {(movimientos ?? expedientes)?.length === 0 && !errorConsulta && <p>{consulta || estado ? "No hay resultados para los filtros aplicados." : vacio}</p>}
       {movimientos && movimientos.length > 0 && <section className={styles.panel}>
         <ol className={styles.lista}>{movimientos.map((movimiento) => (
           <li key={movimiento.id}>
@@ -135,13 +142,30 @@ export default function Seguimiento({ vista }: { vista: keyof typeof vistas }) {
       </section>}
       {vista !== "historial" && expedientes?.map((item) => {
         const tramite = Object.entries(tramitesAcademicos).find(([, datos]) => datos.tipo === item.tipoTramite);
-        const base = tramite && esCertificacion(tramite[0]) ? "/certificaciones" : "/grados-titulos";
         return (
           <article key={item.id} id={vista === "expedientes" ? `expediente-${item.id}` : vista === "subsanacion" ? `subsanar-${item.id}` : undefined} className={styles.panel}>
             <h2>{tramite?.[1].nombre ?? item.tipoTramite}</h2>
             <p>{item.programa.nombre} · <strong>{estadoVisible(item.estado)}</strong></p>
             {item.presentadoEn ? <p>{item.codigo} · {new Date(item.presentadoEn).toLocaleDateString("es-PE")}</p>
-              : <p><Link href={`${base}/iniciar-solicitud${tramite ? `?tramite=${tramite[0]}` : ""}`}>Continuar borrador</Link></p>}
+              : item.estado === "borrador" && <p><Link href={tramite ? rutaSolicitud(tramite[0], item.programa.id) : "/mis-tramites/programas"}>Continuar borrador</Link></p>}
+            {item.estado === "emitido" && <p><Link href={`/verificar-documento?codigo=${encodeURIComponent(item.codigo)}`}>Verificar documento emitido</Link></p>}
+            {item.presentadoEn && <p><a href={rutaConstancia(item.id)}>Descargar acuse de presentación</a></p>}
+            {vista === "solicitudes" && ["borrador", "presentado", "en_revision", "observado", "validado", "pendiente_aprobacion"].includes(item.estado) && (
+              <details><summary>Desistir de esta solicitud</summary>
+                <form className={styles.formulario} onSubmit={(evento) => {
+                  evento.preventDefault();
+                  const motivo = new FormData(evento.currentTarget).get("motivo");
+                  void ejecutar(async () => {
+                    const respuesta = await solicitudes.desistir(item.id, motivo);
+                    if (!respuesta.datos) throw new Error(respuesta.error);
+                    return respuesta.datos;
+                  });
+                }}>
+                  <label>Motivo<input name="motivo" required maxLength={1500} /></label>
+                  <button disabled={ocupado}>Confirmar desistimiento</button>
+                </form>
+              </details>
+            )}
             {item.observaciones && <p>{item.observaciones}</p>}
             {item.estado === "observado" && vista !== "subsanacion" && (
               <>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { api } from "../lib/api";
+import { API_URL } from "../lib/constants";
 import { descargarDocumento, estadoVisible, type Solicitud } from "../grados-titulos/solicitudes-api";
 import { tramitesAcademicos } from "../grados-titulos/tramites";
 import styles from "../grados-titulos/orientacion.module.css";
@@ -13,6 +14,14 @@ type Pagina = { datos: Caso[]; siguiente: boolean; puedeAprobar: boolean };
 type Resumen = { tipoTramite: string; estado: string; total: number };
 
 type Props = { titulo?: string; tipos?: string; estado?: string; plantillas?: boolean };
+const transiciones: Record<string, { accion: string; texto: string; autoridad?: boolean }[]> = {
+  en_revision: [{ accion: "finalizar_validacion", texto: "Cerrar validación" }],
+  validado: [{ accion: "remitir", texto: "Remitir para aprobación" }],
+  pendiente_aprobacion: [{ accion: "aprobar", texto: "Aprobar", autoridad: true }, { accion: "rechazar", texto: "Rechazar", autoridad: true }],
+  aprobado: [{ accion: "preparar_emision", texto: "Preparar emisión", autoridad: true }, { accion: "anular", texto: "Anular", autoridad: true }],
+  en_emision: [{ accion: "emitir", texto: "Registrar emisión", autoridad: true }, { accion: "anular", texto: "Anular", autoridad: true }],
+  emitido: [{ accion: "anular", texto: "Anular", autoridad: true }],
+};
 export default function Revision(props: Props) {
   return <Suspense fallback={<p role="status">Consultando expedientes…</p>}><Filtros {...props} /></Suspense>;
 }
@@ -50,11 +59,22 @@ function Expedientes({ titulo = "Revisión de expedientes académicos", tipos, e
     finally { setOcupado(false); }
   }
 
-  function cambiar(id: number, accion: string, requisitoId?: number, comentario?: FormDataEntryValue | null) {
+  function cambiar(id: number, accion: string, requisitoId?: number, comentario?: FormDataEntryValue | null, pdf?: FormDataEntryValue | null) {
     void ejecutar(async () => {
-      const respuesta = await api.post<Caso>(`/revision-grados/${id}/acciones`, { accion, requisitoId, comentario });
-      const actualizado = respuesta.datos;
-      if (!actualizado) throw new Error(respuesta.error);
+      const ruta = `/revision-grados/${id}/acciones`;
+      let actualizado: Caso;
+      if (accion === "emitir" && pdf instanceof File && pdf.size) {
+        if (pdf.size > 10 * 1024 * 1024 || pdf.type !== "application/pdf") throw new Error("Selecciona un PDF de hasta 10 MB.");
+        const respuesta = await fetch(API_URL + ruta, { method: "POST", credentials: "same-origin", body: pdf,
+          headers: { "Content-Type": "application/pdf", "X-Sigep-Referencia": encodeURIComponent(String(comentario ?? "")) } });
+        const resultado = await respuesta.json().catch(() => null);
+        if (!respuesta.ok || !resultado) throw new Error(resultado?.error ?? "No se pudo registrar la emisión.");
+        actualizado = resultado;
+      } else {
+        const respuesta = await api.post<Caso>(ruta, { accion, requisitoId, comentario });
+        if (!respuesta.datos) throw new Error(respuesta.error);
+        actualizado = respuesta.datos;
+      }
       setLista((vigente) => vigente && { ...vigente, datos: vigente.datos.map((caso) => caso.id === id ? actualizado : caso) });
       setReporte(undefined);
     });
@@ -92,14 +112,18 @@ function Expedientes({ titulo = "Revisión de expedientes académicos", tipos, e
           <p>{caso.usuario.nombres} {caso.usuario.apellidos} · {caso.programa.nombre} · {estadoVisible(caso.estado)}</p>
           <p>{Object.values(tramitesAcademicos).find((t) => t.tipo === caso.tipoTramite)?.nombre}</p>
           {caso.estado === "presentado" && <button type="button" disabled={ocupado} onClick={() => cambiar(caso.id, "revisar")}>Iniciar revisión</button>}
-          {caso.estado === "en_revision" && lista.puedeAprobar && <button type="button" disabled={ocupado} onClick={() => cambiar(caso.id, "aprobar")}>Aprobar expediente</button>}
-          {caso.estado === "aprobado" && lista.puedeAprobar && <form className={styles.formulario} onSubmit={(evento) => {
+          {transiciones[caso.estado]?.filter(({ autoridad }) => !autoridad || lista.puedeAprobar).map(({ accion, texto, autoridad }) => !autoridad
+            ? <button key={accion} type="button" disabled={ocupado} onClick={() => cambiar(caso.id, accion)}>{texto}</button>
+            : <form key={accion} className={styles.formulario} onSubmit={(evento) => {
             evento.preventDefault();
-            cambiar(caso.id, "emitir", undefined, new FormData(evento.currentTarget).get("referencia"));
+            const datos = new FormData(evento.currentTarget);
+            cambiar(caso.id, accion, undefined, datos.get("referencia"), datos.get("documento"));
           }}>
-            <label>Referencia del documento ya emitido<input name="referencia" required maxLength={1500} /></label>
-            <button type="submit" disabled={ocupado}>Registrar emisión</button>
-          </form>}
+            <label>{accion === "emitir" ? "Referencia del documento ya emitido" : `Motivo o resolución para ${texto.toLowerCase()}`}
+              <input name="referencia" required maxLength={1500} /></label>
+            {accion === "emitir" && <label>PDF del documento emitido<input name="documento" type="file" accept="application/pdf" /></label>}
+            <button type="submit" disabled={ocupado}>{texto}</button>
+          </form>)}
           {caso.estado === "emitido" && <p><Link href={`/verificar-documento?codigo=${encodeURIComponent(caso.codigo)}`}>Verificar documento emitido</Link></p>}
           <details>
             <summary>Requisitos y documentos</summary>

@@ -5,14 +5,15 @@ import { SelloPosgrado } from "../../grados-titulos/orientacion";
 import { certificaciones, esCertificacion } from "../../grados-titulos/tramites";
 import styles from "../../grados-titulos/orientacion.module.css";
 
-type Props = { searchParams: Promise<{ tramite?: string | string[] }> };
+type Props = { searchParams: Promise<{ tramite?: string | string[]; programa?: string | string[] }> };
 
 export default function Pagina(props: Props) {
   return <Suspense fallback={<main className={styles.pagina}>Cargando solicitud…</main>}><Contenido {...props} /></Suspense>;
 }
 
 async function Contenido({ searchParams }: Props) {
-  const { tramite } = await searchParams;
+  const { tramite, programa } = await searchParams;
+  const programaInicial = typeof programa === "string" && /^[1-9]\d{0,9}$/.test(programa) ? programa : undefined;
   const seleccion = typeof tramite === "string" && esCertificacion(tramite) ? tramite : undefined;
   return (
     <main className={styles.pagina}>
@@ -29,7 +30,7 @@ async function Contenido({ searchParams }: Props) {
           <Link href={seleccion ? `/certificaciones/${seleccion}#requisitos` : "/certificaciones/requisitos"}>Consultar requisitos</Link>
         </div>
       </header>
-      <Asistente key={seleccion ?? "certificaciones"} seleccion={seleccion} certificaciones />
+      <Asistente key={`${seleccion ?? "certificaciones"}/${programaInicial ?? ""}`} seleccion={seleccion} programaInicial={programaInicial} certificaciones />
     </main>
   );
 }

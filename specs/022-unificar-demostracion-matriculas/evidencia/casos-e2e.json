@@ -1,0 +1,104 @@
+{
+  "casos": [
+    {
+      "codigo": "CP01",
+      "estado": "PASS",
+      "detalle": "sesión integral iniciada"
+    },
+    {
+      "codigo": "CP02",
+      "estado": "PASS",
+      "detalle": "matrículas propias incluyen los tres tipos solicitados"
+    },
+    {
+      "codigo": "CP04",
+      "estado": "PASS",
+      "detalle": "borrador iniciado para doctor"
+    },
+    {
+      "codigo": "CP06",
+      "estado": "PASS",
+      "detalle": "requisitos publicados corresponden al trámite y programa"
+    },
+    {
+      "codigo": "CP07",
+      "estado": "PASS",
+      "detalle": "PDF adjuntado, visualizado, reemplazado y retirado en borrador"
+    },
+    {
+      "codigo": "CP09",
+      "estado": "PASS",
+      "detalle": "solicitud doctor presentada"
+    },
+    {
+      "codigo": "CP11",
+      "estado": "PASS",
+      "detalle": "expediente doctor visible en Mis Trámites"
+    },
+    {
+      "codigo": "CP03",
+      "estado": "PASS",
+      "detalle": "borrador iniciado para maestro"
+    },
+    {
+      "codigo": "CP06",
+      "estado": "PASS",
+      "detalle": "requisitos publicados corresponden al trámite y programa"
+    },
+    {
+      "codigo": "CP09",
+      "estado": "PASS",
+      "detalle": "solicitud maestro presentada"
+    },
+    {
+      "codigo": "CP11",
+      "estado": "PASS",
+      "detalle": "expediente maestro visible en Mis Trámites"
+    },
+    {
+      "codigo": "CP05",
+      "estado": "PASS",
+      "detalle": "borrador iniciado para segunda-especialidad"
+    },
+    {
+      "codigo": "CP06",
+      "estado": "PASS",
+      "detalle": "requisitos publicados corresponden al trámite y programa"
+    },
+    {
+      "codigo": "CP09",
+      "estado": "PASS",
+      "detalle": "solicitud segunda-especialidad presentada"
+    },
+    {
+      "codigo": "CP11",
+      "estado": "PASS",
+      "detalle": "expediente segunda-especialidad visible en Mis Trámites"
+    },
+    {
+      "codigo": "CP08",
+      "estado": "PASS",
+      "detalle": "borradores guardados y recuperados antes de presentar"
+    },
+    {
+      "codigo": "CP10",
+      "estado": "PASS",
+      "detalle": "tres expedientes independientes con IDs distintos"
+    },
+    {
+      "codigo": "CP12",
+      "estado": "PASS",
+      "detalle": "expedientes persistidos después de cerrar e iniciar sesión"
+    },
+    {
+      "codigo": "CP13",
+      "estado": "PASS",
+      "detalle": "cuenta solo-maestría bloqueada sin solicitud nueva"
+    },
+    {
+      "codigo": "CP14",
+      "estado": "PASS",
+      "detalle": "Grado de Maestro completado y regresión comprobada"
+    }
+  ]
+}

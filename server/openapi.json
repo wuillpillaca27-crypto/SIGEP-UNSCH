@@ -48,6 +48,41 @@
         }
       }
     },
+    "/api/orientacion": {
+      "post": {
+        "summary": "Registrar una consulta de orientación y generar un código de atención",
+        "responses": { "201": { "description": "Código y fecha de registro." }, "400": { "$ref": "#/components/responses/SolicitudInvalida" } }
+      }
+    },
+    "/api/orientacion/consultar": {
+      "post": {
+        "summary": "Consultar la respuesta con el código de atención y el correo registrado",
+        "responses": { "200": { "description": "Fecha y respuesta, si existe." }, "404": { "$ref": "#/components/responses/NoEncontrado" } }
+      }
+    },
+    "/api/atencion-orientacion": {
+      "get": {
+        "summary": "Listar consultas para personal autorizado",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "200": { "description": "Bandeja paginada." }, "403": { "description": "Permisos insuficientes." } }
+      }
+    },
+    "/api/atencion-orientacion/{id}/respuesta": {
+      "patch": {
+        "summary": "Responder una consulta de orientación pendiente",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "200": { "description": "Respuesta registrada." }, "409": { "description": "Consulta respondida o inexistente." } }
+      }
+    },
+    "/api/solicitudes/{id}/constancia": {
+      "get": {
+        "summary": "Descargar el acuse interno de una solicitud presentada por el titular",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "200": { "description": "Archivo de texto de presentación." }, "404": { "$ref": "#/components/responses/NoEncontrado" } }
+      }
+    },
     "/api/salud": {
       "get": {
         "summary": "Comprobar la disponibilidad de la API y el esquema PostgreSQL",
@@ -135,7 +170,7 @@
         "summary": "Consultar trámites académicos habilitados para la matrícula autenticada",
         "security": [{ "cookieAuth": [] }],
         "responses": {
-          "200": { "description": "Devuelve programas con sus trámites autorizados, programaRegistrado y el motivo de indisponibilidad cuando corresponde." },
+          "200": { "description": "Devuelve las matrículas del titular con fechas, estado, motivo por matrícula, y la lista de programas con trámites autorizados." },
           "401": { "$ref": "#/components/responses/NoAutorizado" },
           "403": { "$ref": "#/components/responses/Prohibido" }
         }
@@ -237,6 +272,13 @@
       }
     },
     "/api/solicitudes/{id}/documentos/{documento}": {
+      "delete": {
+        "summary": "Retirar el adjunto vigente de un borrador propio",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/IdSolicitud" }, { "$ref": "#/components/parameters/DocumentoId" }],
+        "responses": { "200": { "description": "Borrador actualizado." }, "404": { "$ref": "#/components/responses/NoEncontrado" },
+          "409": { "description": "El expediente ya no es un borrador." } }
+      },
       "get": {
         "tags": ["Solicitudes"],
         "summary": "Descargar un documento de una solicitud propia",
@@ -442,7 +484,7 @@
         "required": ["tipoTramite"],
         "properties": {
           "tipoTramite": { "type": "string", "enum": ["grado_maestro", "grado_doctor", "titulo_segunda_especialidad", "certificado_diplomado", "certificacion_modulos"] },
-          "programaId": { "type": "integer", "minimum": 1, "description": "Opcional. Si se envía, debe coincidir con el programa de la matrícula autenticada." }
+          "programaId": { "type": "integer", "minimum": 1, "description": "Programa de una matrícula del titular. Requerido cuando hay varias matrículas compatibles con el tipo de trámite." }
         }
       },
       "OpcionesCertificacion": {

@@ -47,22 +47,20 @@ npm start
 
 ## Migrar datos y documentos locales
 
-Crear primero el respaldo junto al origen y confirmar que PostgreSQL ya tiene el esquema inicializado:
+El origen existente se abre exclusivamente en modo de solo lectura. El respaldo local que ya existe no se sobrescribe ni se copia; tampoco se toca la copia externa de `Documents\sigep-respaldo`. Confirmar que PostgreSQL `sigep` ya tiene el esquema inicializado y vaciar sus diez tablas de negocio antes de continuar. El dry-run aborta si encuentra una sola fila de destino.
 
 ```powershell
-Copy-Item server/.runtime-local/.sigep-local/grados.sqlite server/.runtime-local/.sigep-local/grados.respaldo.sqlite
-$env:DATABASE_URL = "postgresql://sigep_migracion:local_migration_only@localhost:5432/sigep_dev"
 Set-Location server
-npm run db:migrar-datos -- --origen .runtime-local/.sigep-local/grados.sqlite --origen-archivos .runtime-local/.sigep-local/documentos --dry-run
+node scripts/migrar-datos.js --origen .runtime-local/.sigep-local/grados.sqlite --origen-archivos .runtime-local/.sigep-local/documentos --dry-run
 ```
 
-**Esperado para `--dry-run`**: el comando lee el origen, valida las conversiones y los conteos esperados y emite el informe, sin escribir en PostgreSQL ni copiar archivos.
+**Esperado para `--dry-run`**: el comando lee SQLite con `readonly=true` y `query_only`, valida conversiones, conteos y hashes deterministas, cuenta las diez tablas destino y emite el informe sin escribir en PostgreSQL ni copiar archivos. En esta etapa los hashes del destino corresponden al resumen vacío y sirven para evidenciar que no hubo carga. La tabla `usuarios` excluye `password` de ambos hashes.
 
 ```powershell
-npm run db:migrar-datos -- --origen .runtime-local/.sigep-local/grados.sqlite --origen-archivos .runtime-local/.sigep-local/documentos
+node scripts/migrar-datos.js --origen .runtime-local/.sigep-local/grados.sqlite --origen-archivos .runtime-local/.sigep-local/documentos --confirmado-migra
 ```
 
-La carpeta de subidas destino usa `SIGEP_UPLOAD_DIR` si est? configurada y, en caso contrario, `server/uploads/documentos`. **Esperado**: el informe verifica el orden y conteo de las diez tablas, IDs y secuencias; confirma los 17 nombres/copias, reporta faltantes y no modifica `grados.sqlite`, el respaldo ni los originales. En `rutaArchivo` queda solo el nombre.
+La carga real requiere ejecutar el comando solo después de escribir `confirmado, migra` en la conversación. La carpeta de subidas destino usa `SIGEP_UPLOAD_DIR` si está configurada y, en caso contrario, `server/uploads/documentos`. **Esperado**: una única transacción PostgreSQL verifica conteos y hashes antes del commit, conserva IDs, sincroniza secuencias y revierte ante cualquier discrepancia; copia los documentos disponibles y no modifica SQLite ni sus respaldos. En `rutaArchivo` queda solo el nombre. La contraseña bcrypt se compara internamente y nunca se imprime. La prueba de login se hace después, con credenciales ingresadas interactivamente, sin registrarlas.
 
 Conteos esperados: usuarios 7, programas 6, estudiantes 6, plantillas_requisito 6, solicitudes 12, validaciones_requisito 11, documentos_solicitud 17, revisiones 34, historial_estados 56 y auditoria 68. `activo`/`obligatorio` convierten 0/1 a boolean; fechas ISO 8601 con zona se importan como timestamp y se normalizan a UTC si el destino no conserva zona. La operación es idempotente: puede repetirse sin duplicar datos.
 

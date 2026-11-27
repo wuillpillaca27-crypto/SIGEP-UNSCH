@@ -8,6 +8,7 @@ import { PerfilEstudiante } from "./sesion";
 import styles from "../grados-titulos/orientacion.module.css";
 
 const opciones = [
+  ["programas", "Mis programas académicos", "Consulta tus matrículas y los trámites habilitados por programa."],
   ["nueva-solicitud", "Nueva solicitud", "Elige un grado, título o certificación."],
   ["solicitudes", "Mis solicitudes", "Revisa tus solicitudes y retoma un borrador."],
   ["expedientes", "Estado de expediente", "Consulta el estado y los documentos de los trámites presentados."],
@@ -37,7 +38,7 @@ export default function MisTramites() {
       <header className={styles.hero}>
         <SelloPosgrado />
         <h1>Mis Trámites</h1>
-        <p>{perfil?.nombres} {perfil?.apellidos} · {perfil?.estudiante?.programa.nombre}</p>
+        <p>{perfil?.nombres} {perfil?.apellidos}</p>
         <div className={styles.acciones}><Link href="/mis-tramites/nueva-solicitud">Nueva solicitud</Link></div>
       </header>
       {error && <div className={styles.panel}>

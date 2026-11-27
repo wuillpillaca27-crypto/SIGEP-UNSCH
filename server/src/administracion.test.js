@@ -207,7 +207,22 @@ describe("Administración", () => {
     const detalle = await ctx.pedir(ruta, { rol: "administrador" });
     expect(detalle.body.configuracionTramite).toMatchObject({ habilitado: true, tipoTramite: "grado_doctor" });
     expect(detalle.body.plantillasRequisito).toEqual(expect.arrayContaining([expect.objectContaining({ id: alta.body.id, obligatorio: false, activo: true })]));
-    expect(detalle.body.cambiosAcademicos.map(({ accion }) => accion)).toEqual(["configurar_tramite", "publicar_requisito", "crear_requisito"]);
+    expect(detalle.body.cambiosAcademicos.map(({ accion }) => accion).slice(0, 3)).toEqual(["configurar_tramite", "publicar_requisito", "crear_requisito"]);
+  });
+
+  test("asocia otra matrícula y permite cambiar su estado solo al administrador", async () => {
+    const programa = await ctx.prisma.programa.create({ data: { nombre: "Otro programa de prueba", facultad: "Pruebas", tipo: "diplomado" } });
+    const datos = { dni: "00000003", codigoUniv: "ADM-MULTI", programaId: programa.id, estadoAcad: "activo",
+      fechaInicio: "2026-01-01", fechaFin: "", habilitadoTramites: true };
+    const alta = "/administracion/matriculas";
+    expect((await ctx.pedir(alta, { rol: "operador", metodo: "POST", datos })).status).toBe(403);
+    const creada = await ctx.pedir(alta, { rol: "administrador", metodo: "POST", datos });
+    expect(creada.status).toBe(201);
+    expect((await ctx.pedir(alta, { rol: "administrador", metodo: "POST", datos })).status).toBe(409);
+    const cambio = await ctx.pedir(`${alta}/${creada.body.id}`, { rol: "administrador", metodo: "PATCH",
+      datos: { ...datos, estadoAcad: "retirado", fechaFin: "2026-06-01", habilitadoTramites: false } });
+    expect(cambio).toMatchObject({ status: 200, body: { estadoAcad: "retirado", habilitadoTramites: false } });
+    expect(await ctx.prisma.estudiante.count({ where: { usuarioId: 3 } })).toBe(2);
   });
 
   test("delega errores Prisma no P2002 al manejador global vigente", async () => {

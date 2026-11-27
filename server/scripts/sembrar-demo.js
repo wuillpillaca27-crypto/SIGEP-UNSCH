@@ -33,21 +33,28 @@ async function sembrar() {
     const filas = await prisma.$transaction(async (db) => {
       await db.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(hashtext('sigep.demo.seed'), 0)`;
       const resultados = [];
-      async function cuenta(clave, indice, rol, programaId) {
-        const email = `${clave}@academico.demo.sigep.test`;
+      async function cuenta(clave, indice, rol, registros = [], email = `${clave}@academico.demo.sigep.test`) {
         const dni = String(99008000 + indice);
-        if (await db.usuario.findUnique({ where: { email }, select: { id: true } })) {
+        const previa = await db.usuario.findUnique({ where: { email }, select: { id: true } });
+        if (previa) {
+          for (const { programaId, codigoUniv } of registros) {
+            await db.estudiante.upsert({
+              where: { usuarioId_programaId: { usuarioId: previa.id, programaId } },
+              create: { usuarioId: previa.id, programaId, codigoUniv }, update: {},
+            });
+          }
           if (previas.has(clave)) resultados.push(previas.get(clave));
           return;
         }
         const password = randomBytes(15).toString("base64url");
         await db.usuario.create({ data: {
           nombres: "Cuenta", apellidos: `Demostración ${clave}`, dni, email, rol, password: await bcrypt.hash(password, 10),
-          ...(programaId && { estudiante: { create: { codigoUniv: `DEMO-ACA-${indice}`, programaId } } }),
+          ...(registros.length && { estudiantes: { create: registros } }),
           ...(clave === "autoridad" && { puedeAprobar: true }),
         } });
         resultados.push([clave, rol, dni, email, password].join("\t"));
       }
+      const multiples = [];
       for (const [indice, [tipo, nombre]] of tipos.entries()) {
         const tramite = tipoPorPrograma[tipo];
         const codigo = `DEMO-ACA-${tipo}`;
@@ -78,8 +85,13 @@ async function sembrar() {
           await db.plantillaRequisito.upsert({ where: { codigo: codigoEjemplo }, update: {},
             create: { ...requisito, ...ejemplo, codigo: codigoEjemplo, obligatorio: false } });
         }
-        await cuenta(tipo, indice + 1, "estudiante", programa.id);
+        await cuenta(tipo, indice + 1, "estudiante", [{ programaId: programa.id, codigoUniv: `DEMO-ACA-${indice + 1}` }]);
+        multiples.push({ programaId: programa.id, codigoUniv: `DEMO-MULTI-${indice + 1}` });
       }
+      await cuenta("multiprograma", 6, "estudiante", multiples);
+      await cuenta("integral", 7, "estudiante", multiples.map(({ programaId, codigoUniv }) => ({
+        programaId, codigoUniv: codigoUniv.replace("DEMO-MULTI-", "DEMO-INTEGRAL-"),
+      })), "estudiante.integral@demo.test");
       await cuenta("administracion", 10, "administrador");
       await cuenta("revision", 11, "operador");
       await cuenta("autoridad", 12, "operador");

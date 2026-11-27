@@ -1,0 +1,2 @@
+﻿# Diseño
+Reusar sesión, modelo de matrículas, expediente, PDF y panel de administración. Agregar retiro lógico de documentos y consultas con datos y respuesta persistentes. El acuse del portal se genera desde el expediente presentado. Preservar el diseño global y ofrecer orientación para recuperación cuando falta integración institucional. Ejecutar Jest, build, pruebas HTTP y navegador si está disponible.

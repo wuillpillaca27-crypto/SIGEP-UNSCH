@@ -1,6 +1,7 @@
 const { randomBytes, timingSafeEqual } = require("node:crypto");
 const jwt = require("jsonwebtoken");
 const { OAuth2Client } = require("google-auth-library");
+const { usuariosVisibles } = require("./datos-demostracion");
 
 const nombreCookie = "sigep_google";
 const audiencia = "sigep-google-transaccion";
@@ -71,9 +72,9 @@ function registrarGoogle(app, { prisma, secreto, perfil, opcionesCookie, leerCoo
       const email = identidad?.email?.toLowerCase();
       if (!email || identidad.nonce !== tx.nonce || identidad.email_verified !== true || config.vinculos.get(identidad.sub) !== email ||
           (config.dominios.size && !config.dominios.has(identidad.hd?.toLowerCase()))) throw Error();
-      const usuario = await prisma.usuario.findFirst({ where: { email, activo: true }, select: perfil });
+      const usuario = await prisma.usuario.findFirst({ where: { email, activo: true, ...usuariosVisibles() }, select: perfil });
       const personal = usuario && ["administrador", "operador"].includes(usuario.rol);
-      if (!usuario || (!personal && (usuario.rol !== "estudiante" || (!usuario.estudiante && !continuar)))) throw Error();
+      if (!usuario || (!personal && (usuario.rol !== "estudiante" || (!usuario.estudiantes.length && !continuar)))) throw Error();
       iniciarSesion(res, usuario);
       console.info("SIGEP auth: acceso por Google", usuario.id);
       return res.redirect(new URL(personal ? "/admin" : continuar ?? "/mis-tramites", config.redirect).href);

@@ -129,6 +129,7 @@ export interface Pagina<T> {
 
 // ── Respuesta API genérica ────────────────────────────────────
 export interface RespuestaApi<T> {
+  codigo?: string;
   ok: boolean;
   estadoHttp?: number;
   datos?: T;

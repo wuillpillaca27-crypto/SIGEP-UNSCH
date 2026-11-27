@@ -6,6 +6,19 @@ const { facultadesDemostracion, requisitosVisibles } = require("./datos-demostra
 const programas = { id: true, nombre: true, tipo: true, facultad: true, activo: true };
 const usuarios = { id: true, nombres: true, apellidos: true, dni: true, email: true, rol: true, activo: true };
 const texto = (valor, maximo) => typeof valor === "string" && valor.trim().length <= maximo ? valor.trim() : "";
+const estadosAcademicos = ["activo", "egresado", "graduado", "suspendido", "retirado"];
+function datosMatricula({ estadoAcad, fechaInicio, fechaFin, habilitadoTramites } = {}) {
+  const fecha = (valor) => {
+    if (typeof valor !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(valor)) return null;
+    const dia = new Date(valor + "T00:00:00.000Z");
+    return Number.isFinite(+dia) && dia.toISOString().slice(0, 10) === valor ? dia : null;
+  };
+  const inicio = fecha(fechaInicio);
+  const fin = fecha(fechaFin);
+  if (!estadosAcademicos.includes(estadoAcad) || typeof habilitadoTramites !== "boolean" ||
+      !inicio || (fechaFin && !fin) || (fin && fin < inicio)) return null;
+  return { estadoAcad, fechaInicio: inicio, fechaFin: fin, habilitadoTramites };
+}
 
 function registrarAdministracion(app, prisma, autenticar) {
   const router = express.Router();
@@ -113,9 +126,49 @@ function registrarAdministracion(app, prisma, autenticar) {
     const pagina = Math.max(1, Math.min(10000, Number.parseInt(req.query.pagina, 10) || 1));
     const filas = await prisma.estudiante.findMany({
       orderBy: { id: "desc" }, take: 26, skip: (pagina - 1) * 25,
-      select: { id: true, codigoUniv: true, estadoAcad: true, programa: { select: { nombre: true } }, usuario: { select: usuarios } },
+      select: { id: true, codigoUniv: true, estadoAcad: true, fechaInicio: true, fechaFin: true, habilitadoTramites: true,
+        programa: { select: { nombre: true } }, usuario: { select: usuarios } },
     });
     res.json({ datos: filas.slice(0, 25), siguiente: filas.length > 25 });
+  });
+  router.post("/matriculas", soloAdmin, async (req, res) => {
+    const datos = datosMatricula(req.body);
+    const codigoUniv = texto(req.body?.codigoUniv, 40);
+    const dni = texto(req.body?.dni, 8);
+    const programaId = Number(req.body?.programaId);
+    if (!datos || !codigoUniv || !/^\d{8}$/.test(dni) || !Number.isSafeInteger(programaId) || programaId < 1) {
+      return res.status(400).json({ error: "Revisa la cuenta, el programa y los datos de matrícula." });
+    }
+    try {
+      const matricula = await prisma.$transaction(async (db) => {
+        const usuario = await db.usuario.findFirst({ where: { dni, rol: "estudiante", activo: true }, select: { id: true } });
+        const programa = await db.programa.findFirst({ where: { id: programaId, activo: true }, select: { id: true } });
+        if (!usuario || !programa) return null;
+        const registro = await db.estudiante.create({ data: { ...datos, codigoUniv, programaId, usuarioId: usuario.id } });
+        await db.cambioAcademico.create({ data: { programaId, usuarioId: req.usuario.id,
+          accion: "asignar_matricula", detalles: { matriculaId: registro.id, estadoAcad: registro.estadoAcad } } });
+        return registro;
+      });
+      return matricula ? res.status(201).json(matricula) : res.status(422).json({ error: "La cuenta estudiante y el programa deben estar activos." });
+    } catch (error) {
+      if (error.code === "P2002") return res.status(409).json({ error: "La matrícula de ese programa o el código universitario ya están registrados." });
+      throw error;
+    }
+  });
+  router.patch("/matriculas/:id", soloAdmin, async (req, res) => {
+    const id = Number(req.params.id);
+    const datos = datosMatricula(req.body);
+    if (!datos || !Number.isSafeInteger(id) || id < 1) return res.status(400).json({ error: "Revisa las fechas y el estado de matrícula." });
+    const matricula = await prisma.$transaction(async (db) => {
+      await db.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(hashtext('sigep.solicitudes'), ${id}::integer)`;
+      const previa = await db.estudiante.findUnique({ where: { id }, select: { programaId: true } });
+      if (!previa) return null;
+      const registro = await db.estudiante.update({ where: { id }, data: datos });
+      await db.cambioAcademico.create({ data: { programaId: previa.programaId, usuarioId: req.usuario.id,
+        accion: "actualizar_matricula", detalles: { matriculaId: id, estadoAcad: registro.estadoAcad, habilitadoTramites: registro.habilitadoTramites } } });
+      return registro;
+    });
+    return matricula ? res.json(matricula) : res.status(404).json({ error: "Matrícula no encontrada." });
   });
   router.get("/usuarios", soloAdmin, async (req, res) => {
     const pagina = Math.max(1, Math.min(10000, Number.parseInt(req.query.pagina, 10) || 1));
@@ -143,7 +196,7 @@ function registrarAdministracion(app, prisma, autenticar) {
       const cuenta = await prisma.usuario.create({
         data: {
           nombres, apellidos, dni, email, rol, password: await bcrypt.hash(password, 12),
-          ...(rol === "estudiante" && { estudiante: { create: { codigoUniv, programaId } } }),
+          ...(rol === "estudiante" && { estudiantes: { create: { codigoUniv, programaId } } }),
         },
         select: usuarios,
       });

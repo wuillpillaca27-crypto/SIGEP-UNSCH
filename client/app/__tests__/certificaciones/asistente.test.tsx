@@ -48,6 +48,46 @@ describe("Asistente de certificación", () => {
     ));
   });
 
+  it("busca Doctorado entre todas las matrículas y ofrece solo programas compatibles", async () => {
+    const requisito = opciones.programas[0].tramites[0].requisitos;
+    jest.spyOn(solicitudes, "perfil").mockResolvedValue({ ok: true, datos: perfil });
+    jest.spyOn(solicitudes, "opciones").mockResolvedValue({ ok: true, datos: {
+      ...opciones,
+      programas: [
+        ...opciones.programas,
+        { id: 8, nombre: "Doctorado A", tipo: "doctorado", activo: true,
+          tramites: [{ clave: "doctor", nombre: "Grado de Doctor", tipoTramite: "grado_doctor", requisitos: requisito }] },
+        { id: 9, nombre: "Doctorado B", tipo: "doctorado", activo: true,
+          tramites: [{ clave: "doctor", nombre: "Grado de Doctor", tipoTramite: "grado_doctor", requisitos: requisito }] },
+      ],
+    } });
+    render(<AsistenteCertificacion seleccion="doctor" programaInicial="9" navegar={mockReplace} />);
+    await screen.findByRole("heading", { name: "Datos personales" });
+    fireEvent.click(screen.getByRole("button", { name: "Siguiente" }));
+    const selector = screen.getByLabelText("Programa académico");
+    expect(selector).toHaveValue("9");
+    expect(screen.getByRole("option", { name: "Doctorado A" })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: opciones.programas[0].nombre })).not.toBeInTheDocument();
+  });
+
+  it("exige seleccionar explícitamente cuando hay varias matrículas compatibles", async () => {
+    const requisito = opciones.programas[0].tramites[0].requisitos;
+    const doctorados = [8, 9].map((id) => ({
+      id, nombre: `Doctorado ${id}`, tipo: "doctorado", activo: true,
+      tramites: [{ clave: "doctor", nombre: "Grado de Doctor", tipoTramite: "grado_doctor", requisitos: requisito }],
+    }));
+    jest.spyOn(solicitudes, "perfil").mockResolvedValue({ ok: true, datos: perfil });
+    jest.spyOn(solicitudes, "opciones").mockResolvedValue({ ok: true, datos: { ...opciones, programas: doctorados } });
+    render(<AsistenteCertificacion seleccion="doctor" navegar={mockReplace} />);
+    await screen.findByRole("heading", { name: "Datos personales" });
+    fireEvent.click(screen.getByRole("button", { name: "Siguiente" }));
+    const selector = screen.getByLabelText("Programa académico");
+    expect(selector).toHaveValue("");
+    expect(screen.getByRole("button", { name: "Continuar" })).toBeDisabled();
+    fireEvent.change(selector, { target: { value: "9" } });
+    expect(screen.getByRole("button", { name: "Continuar" })).toBeEnabled();
+  });
+
   it("reintenta una conexión fallida y vuelve al login si no hay sesión", async () => {
     jest.spyOn(solicitudes, "perfil")
       .mockResolvedValueOnce({ ok: false, error: "No se pudo conectar con el servidor" })

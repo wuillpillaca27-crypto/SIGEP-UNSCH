@@ -77,7 +77,7 @@ async function crearContexto(claveSesion = secreto) {
     await fixture.cerrar();
   }
 
-  return { prisma, ingresar, pedir, cerrar };
+  return { prisma, ingresar, pedir, cerrar, api };
 }
 
 describe("Identidad y sesión", () => {
@@ -116,6 +116,31 @@ describe("Identidad y sesión", () => {
       status: 200,
       body: { id: 1, nombres: "Ada", apellidos: "Administradora", dni: "12345678", email: "admin@test.invalid", rol: "administrador", estudiante: null },
     });
+    expect(perfil.body.password).toBeUndefined();
+  });
+
+  test("el perfil conserva todas las matrículas y mantiene el campo heredado de primera matrícula", async () => {
+    await ctx.prisma.programa.create({ data: { id: 2, nombre: "Maestría de prueba", tipo: "maestria", facultad: "Pruebas" } });
+    await ctx.prisma.usuario.create({ data: {
+      id: 3, nombres: "Estudiante", apellidos: "Integral", dni: "00000003", email: "integral@test.invalid",
+      password: bcrypt.hashSync(clave, 4), rol: "estudiante",
+    } });
+    await ctx.prisma.estudiante.createMany({ data: [
+      { id: 1, usuarioId: 3, programaId: 1, codigoUniv: "TEST-DOCTORADO" },
+      { id: 2, usuarioId: 3, programaId: 2, codigoUniv: "TEST-MAESTRIA" },
+    ] });
+
+    const login = await fetch(`${ctx.api}/auth/login`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: "integral@test.invalid", password: clave }),
+    });
+    expect(login.status).toBe(200);
+    const sesion = await login.json();
+    expect(sesion.usuario.estudiante.codigoUniv).toBe("TEST-DOCTORADO");
+    expect(sesion.usuario.estudiantes.map(({ programa }) => programa.tipo)).toEqual(["doctorado", "maestria"]);
+    expect(sesion.usuario.password).toBeUndefined();
+    const perfil = await ctx.pedir("/auth/perfil", { cookie: login.headers.get("set-cookie").split(";")[0] });
+    expect(perfil.body.estudiantes).toHaveLength(2);
     expect(perfil.body.password).toBeUndefined();
   });
 

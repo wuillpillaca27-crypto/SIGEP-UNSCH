@@ -1,0 +1,27 @@
+[
+  {
+    "id": 36,
+    "codigo": "SIGEP-6e63f51b-c2ff-4dad-9492-02c8fbc3d936",
+    "tipoTramite": "grado_doctor"
+  },
+  {
+    "id": 37,
+    "codigo": "SIGEP-27bfe450-9bae-48ea-a7d6-64ea39f56ed8",
+    "tipoTramite": "grado_maestro"
+  },
+  {
+    "id": 38,
+    "codigo": "SIGEP-45a8cee9-691c-415c-b5ff-cd345f06dc12",
+    "tipoTramite": "titulo_segunda_especialidad"
+  },
+  {
+    "id": 39,
+    "codigo": "SIGEP-219f63af-73ad-47ba-83ee-58df624a4e62",
+    "tipoTramite": "certificado_diplomado"
+  },
+  {
+    "id": 40,
+    "codigo": "SIGEP-b48cdee6-f836-468d-bfa3-c31b9d5d6431",
+    "tipoTramite": "certificacion_modulos"
+  }
+]

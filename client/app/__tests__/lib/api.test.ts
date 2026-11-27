@@ -110,7 +110,7 @@ describe("cliente HTTP", () => {
     });
   });
 
-  it("devuelve el mensaje de conexión ante un cuerpo de error que no es JSON", async () => {
+  it("conserva el estado de un error del proxy aunque el cuerpo no sea JSON", async () => {
     server.use(
       http.get("*/api/sigep/error/no-json", () =>
         HttpResponse.text("respuesta inválida", { status: 500 }),
@@ -119,7 +119,8 @@ describe("cliente HTTP", () => {
 
     await expect(api.get("/error/no-json")).resolves.toEqual({
       ok: false,
-      error: "No se pudo conectar con el servidor",
+      estadoHttp: 500,
+      error: "El portal no recibe una respuesta válida de la API. Reintenta en unos instantes.",
     });
   });
 

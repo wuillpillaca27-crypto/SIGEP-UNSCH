@@ -1,0 +1,2 @@
+﻿# Plan
+Conservar las filas Estudiante como registros académicos y Solicitud.estudianteId como referencia histórica. Reemplazar la unicidad por usuario con una unicidad por usuario y programa, preservando los códigos existentes. Reutilizar sesión, catálogo, administración, documentos y seguimiento. Mantener una proyección de perfil para clientes existentes y añadir la lista en el contrato autenticado.

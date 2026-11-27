@@ -59,7 +59,7 @@ async function preparar() {
         await db.usuario.create({ data: {
           nombres: "Estudiante", apellidos: `Demo ${nombre}`, dni: String(indice).padStart(8, "0"),
           email, password: hashes.get(email),
-          estudiante: { create: { codigoUniv: `DEMO-${indice}`, programaId: programa.id } },
+          estudiantes: { create: { codigoUniv: `DEMO-${indice}`, programaId: programa.id } },
         } });
       }
       if (hashes.has("revision@sigep.test") && !await db.usuario.findUnique({ where: { email: "revision@sigep.test" } })) await db.usuario.create({ data: {

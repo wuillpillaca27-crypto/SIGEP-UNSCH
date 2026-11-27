@@ -2,12 +2,19 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { randomUUID } = require("node:crypto");
 const { registrarGoogle } = require("./identidad-google");
-const { permiteDemostracion } = require("./datos-demostracion");
+const { permiteDemostracion, usuariosVisibles } = require("./datos-demostracion");
 
 const perfil = {
   id: true, nombres: true, apellidos: true, dni: true, email: true, rol: true, puedeAprobar: true,
-  estudiante: { select: { id: true, codigoUniv: true, programa: { select: { id: true, nombre: true, tipo: true, activo: true } } } },
+  estudiantes: { orderBy: { id: "asc" }, select: {
+    id: true, codigoUniv: true, programa: { select: { id: true, nombre: true, tipo: true, activo: true } },
+  } },
 };
+const perfilPublico = ({ estudiantes = [], ...usuario }) => ({
+  ...usuario,
+  estudiantes,
+  estudiante: estudiantes[0] ?? null,
+});
 
 const nombreCookie = "sigep_sesion";
 const opcionesCookie = { httpOnly: true, sameSite: "lax", secure: !permiteDemostracion(), path: "/" };
@@ -44,7 +51,7 @@ function registrarIdentidad(app, prisma, secreto) {
       }
       return res.status(401).json({ codigo: "SESION_INVALIDA", error: "Inicia sesión nuevamente" });
     }
-    const usuario = await prisma.usuario.findFirst({ where: { id, activo: true }, select: perfil });
+    const usuario = await prisma.usuario.findFirst({ where: { id, activo: true, ...usuariosVisibles() }, select: perfil });
     if (!usuario) return res.status(401).json({ codigo: "SESION_INVALIDA", error: "Inicia sesión nuevamente" });
     req.usuario = usuario;
     return next();
@@ -71,7 +78,7 @@ function registrarIdentidad(app, prisma, secreto) {
     intento.veces++;
     intentos.set(req.ip, intento);
     const usuario = await prisma.usuario.findFirst({
-      where: { ...identificador, activo: true }, select: { ...perfil, password: true },
+      where: { ...identificador, activo: true, ...usuariosVisibles() }, select: { ...perfil, password: true },
     });
     const coincide = await bcrypt.compare(password, usuario?.password ?? hashAlternativo);
     if (!usuario || !coincide) {
@@ -81,7 +88,7 @@ function registrarIdentidad(app, prisma, secreto) {
     const { password: _password, ...datos } = usuario;
     iniciarSesion(res, datos);
     console.info("SIGEP auth: acceso por contraseña", datos.id);
-    return res.json({ usuario: datos });
+    return res.json({ usuario: perfilPublico(datos) });
   });
   app.post("/api/auth/logout", (req, res) => {
     res.set("Cache-Control", "no-store");
@@ -95,7 +102,7 @@ function registrarIdentidad(app, prisma, secreto) {
     res.clearCookie(nombreCookie, opcionesCookie);
     return res.json({ ok: true });
   });
-  app.get("/api/auth/perfil", autenticar, (req, res) => res.json(req.usuario));
+  app.get("/api/auth/perfil", autenticar, (req, res) => res.json(perfilPublico(req.usuario)));
   registrarGoogle(app, { prisma, secreto, perfil, opcionesCookie, leerCookie, iniciarSesion });
   return autenticar;
 }

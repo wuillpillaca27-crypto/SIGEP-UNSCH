@@ -11,6 +11,7 @@ const { registrarSolicitudes } = require("./solicitudes");
 const { registrarRevision } = require("./revision-grados");
 const { registrarVerificacion } = require("./verificacion-documentos");
 const { registrarAdministracion } = require("./administracion");
+const { registrarOrientacion } = require("./orientacion");
 
 jest.setTimeout(120000);
 
@@ -28,6 +29,7 @@ async function crearContexto() {
   registrarRevision(app, prisma, autenticar, join(carpeta, "archivos"));
   registrarVerificacion(app, prisma);
   registrarAdministracion(app, prisma, autenticar);
+  registrarOrientacion(app, prisma, autenticar);
   const servidor = app.listen(0, "127.0.0.1");
   await once(servidor, "listening");
   const api = `http://127.0.0.1:${servidor.address().port}/api`;
@@ -62,6 +64,7 @@ async function crearContexto() {
   }
   async function restablecer() {
     await prisma.$transaction(async (tx) => {
+      await tx.consultaOrientacion.deleteMany();
       await tx.revision.deleteMany();
       await tx.auditoria.deleteMany();
       await tx.documentoSolicitud.deleteMany();
@@ -122,6 +125,48 @@ describe("Solicitudes, revisión e identidad", () => {
   beforeEach(async () => { await ctx.restablecer(); });
   afterAll(async () => { await ctx.cerrar(); });
 
+  test("retira adjuntos de borradores y limita la constancia al titular después de presentar", async () => {
+    const token = await ctx.ingresar(1);
+    const ajeno = await ctx.ingresar(2);
+    const { solicitud, ruta, documento } = await prepararSolicitud(ctx, token);
+    await ctx.pedir(ruta + "/constancia", 404, { token });
+    await ctx.pedir(documento, 404, { token: ajeno, metodo: "DELETE" });
+    const retirado = await ctx.pedir(documento, 200, { token, metodo: "DELETE" });
+    expect(retirado.documentos).toEqual([]);
+    expect(retirado.validaciones[0].estado).toBe("pendiente");
+    await ctx.pedir(documento, 404, { token });
+    await ctx.pedir(ruta + "/presentar", 422, { token, metodo: "POST" });
+    const adjunto = await ctx.pedir(ruta + "/documentos/1", 200, { token, metodo: "PUT", pdf });
+    await ctx.pedir(ruta + "/presentar", 200, { token, metodo: "POST" });
+    await ctx.pedir(ruta + "/documentos/" + adjunto.documentos[0].id, 409, { token, metodo: "DELETE" });
+    await ctx.pedir(ruta + "/constancia", 404, { token: ajeno });
+    const acuse = await ctx.pedir(ruta + "/constancia", 200, { token, binario: true });
+    expect(acuse.toString("utf8")).toContain(solicitud.codigo);
+  });
+
+  test("registra orientación y solo permite la respuesta al personal autorizado", async () => {
+    const alumno = await ctx.ingresar(1);
+    const operador = await ctx.ingresar(3);
+    const correo = "consulta@test.invalid";
+    const datos = { nombres: "Persona de prueba", correo, asunto: "Orientación", descripcion: "Consulta de prueba", tipoTramite: "grado_doctor" };
+    const alta = await ctx.pedir("/orientacion", 201, { metodo: "POST", datos });
+    expect(alta.codigo).toMatch(/^ORI-[A-F0-9]{32}$/);
+    expect(alta.correo).toBeUndefined();
+    const consultar = "/orientacion/consultar";
+    await ctx.pedir(consultar, 404, { metodo: "POST", datos: { codigo: alta.codigo, correo: "otro@test.invalid" } });
+    expect((await ctx.pedir(consultar, 200, { metodo: "POST", datos: { codigo: alta.codigo, correo } })).respuesta).toBeNull();
+    await ctx.pedir("/atencion-orientacion", 403, { token: alumno });
+    const bandeja = await ctx.pedir("/atencion-orientacion", 200, { token: operador });
+    const ruta = `/atencion-orientacion/${bandeja.datos[0].id}/respuesta`;
+    const respuesta = "Consulta atendida";
+    await ctx.pedir(ruta, 403, { token: alumno, metodo: "PATCH", datos: { respuesta } });
+    await ctx.pedir(ruta, 200, { token: operador, metodo: "PATCH", datos: { respuesta } });
+    await ctx.pedir(ruta, 409, { token: operador, metodo: "PATCH", datos: { respuesta } });
+    const vista = await ctx.pedir(consultar, 200, { metodo: "POST", datos: { codigo: alta.codigo, correo } });
+    expect(vista.respuesta).toBe(respuesta);
+    expect(vista.respondidaPorId).toBeUndefined();
+  });
+
   test("las opciones de certificación exigen sesión y rol estudiante", async () => {
     await ctx.pedir("/solicitudes/opciones-certificacion", 401);
     const operador = await ctx.ingresar(3);
@@ -176,7 +221,7 @@ describe("Solicitudes, revisión e identidad", () => {
 
   test("distingue ausencia de matrícula y programa inactivo", async () => {
     const token = await ctx.ingresar(2);
-    await ctx.prisma.estudiante.delete({ where: { usuarioId: 2 } });
+    await ctx.prisma.estudiante.delete({ where: { usuarioId_programaId: { usuarioId: 2, programaId: 1 } } });
     const sinMatricula = await ctx.pedir("/solicitudes/opciones-certificacion", 200, { token });
     expect(sinMatricula).toMatchObject({ programas: [], motivo: "sin_matricula" });
 
@@ -184,6 +229,41 @@ describe("Solicitudes, revisión e identidad", () => {
     await ctx.prisma.programa.update({ where: { id: 1 }, data: { activo: false } });
     const inactivo = await ctx.pedir("/solicitudes/opciones-certificacion", 200, { token });
     expect(inactivo).toMatchObject({ programas: [], motivo: "programa_inactivo" });
+  });
+
+  test("admite dos matrículas compatibles, conserva borradores distintos y bloquea una matrícula suspendida o ajena", async () => {
+    await ctx.prisma.programa.create({ data: { id: 2, nombre: "Segundo doctorado de prueba", tipo: "doctorado", facultad: "Pruebas" } });
+    const matricula = await ctx.prisma.estudiante.create({ data: { usuarioId: 1, programaId: 2, codigoUniv: "TEST-SEGUNDO" } });
+    await ctx.prisma.plantillaRequisito.create({ data: {
+      programaId: 2, tipoTramite: "grado_doctor", codigo: "REQ-SEGUNDO", nombre: "PDF del segundo programa",
+      descripcion: "Documento de prueba", tipo: "documental",
+    } });
+    const token = await ctx.ingresar(1);
+    const otraCuenta = await ctx.ingresar(2);
+    const opciones = await ctx.pedir("/solicitudes/opciones", 200, { token });
+    expect(opciones.programas.map(({ id }) => id)).toEqual([1, 2]);
+    expect(opciones.matriculas[1]).toMatchObject({ matriculaId: matricula.id, estadoAcad: "activo" });
+    const perfil = await ctx.pedir("/auth/perfil", 200, { token });
+    expect(perfil.estudiantes.map(({ programa }) => programa.tipo)).toEqual(["doctorado", "doctorado"]);
+    const tipoTramite = "grado_doctor";
+    await ctx.pedir("/solicitudes", 422, { token, metodo: "POST", datos: { tipoTramite } });
+    await ctx.pedir("/solicitudes", 422, { token: otraCuenta, metodo: "POST", datos: { tipoTramite, programaId: 2 } });
+    const primero = await ctx.pedir("/solicitudes", 200, { token, metodo: "POST", datos: { tipoTramite, programaId: 1 } });
+    const segundo = await ctx.pedir("/solicitudes", 200, { token, metodo: "POST", datos: { tipoTramite, programaId: 2 } });
+    expect(segundo.id).not.toBe(primero.id);
+    expect(await ctx.prisma.solicitud.findUnique({ where: { id: segundo.id } })).toMatchObject({ estudianteId: matricula.id, programaId: 2 });
+    const archivo = `/solicitudes/${segundo.id}/documentos/${segundo.validaciones[0].plantilla.id}`;
+    await ctx.pedir(archivo, 404, { token: otraCuenta, metodo: "PUT", pdf });
+    await ctx.pedir(archivo, 200, { token, metodo: "PUT", pdf });
+    await ctx.prisma.estudiante.update({ where: { id: matricula.id }, data: { estadoAcad: "suspendido" } });
+    const suspendida = await ctx.pedir("/solicitudes/opciones", 200, { token });
+    expect(suspendida.matriculas[1]).toMatchObject({ motivo: "matricula_no_habilitada", tramites: [] });
+    const unico = await ctx.pedir("/solicitudes", 200, { token, metodo: "POST", datos: { tipoTramite } });
+    expect(unico.id).toBe(primero.id);
+    await ctx.pedir(`/solicitudes/${segundo.id}/presentar`, 409, { token, metodo: "POST" });
+    await ctx.prisma.estudiante.update({ where: { id: matricula.id }, data: { estadoAcad: "egresado" } });
+    const presentada = await ctx.pedir(`/solicitudes/${segundo.id}/presentar`, 200, { token, metodo: "POST" });
+    expect(presentada).toMatchObject({ estado: "presentado", programa: { id: 2 } });
   });
 
   test("la creación de certificación comprueba el programa seleccionado", async () => {

@@ -5,7 +5,7 @@ import styles from "../orientacion.module.css";
 import Asistente from "./asistente";
 import { SelloPosgrado } from "../orientacion";
 
-type Parametros = Promise<{ tramite?: string | string[] }>;
+type Parametros = Promise<{ tramite?: string | string[]; programa?: string | string[] }>;
 
 export default function IniciarSolicitud({ searchParams }: { searchParams: Parametros }) {
   return <Suspense fallback={<main className={styles.pagina}>Cargando solicitud…</main>}>
@@ -18,7 +18,8 @@ async function Contenido({
 }: {
   searchParams: Parametros;
 }) {
-  const { tramite } = await searchParams;
+  const { tramite, programa } = await searchParams;
+  const programaInicial = typeof programa === "string" && /^[1-9]\d{0,9}$/.test(programa) ? programa : undefined;
   const seleccion = typeof tramite === "string" && esTramite(tramite) ? tramite : undefined;
 
   return (
@@ -36,7 +37,7 @@ async function Contenido({
           <Link href="/ayuda">Solicitar orientación</Link>
         </div>
       </header>
-      <Asistente key={seleccion ?? "grados-titulos"} seleccion={seleccion} />
+      <Asistente key={`${seleccion ?? "grados-titulos"}/${programaInicial ?? ""}`} seleccion={seleccion} programaInicial={programaInicial} />
     </main>
   );
 }

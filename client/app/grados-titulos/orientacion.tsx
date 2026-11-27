@@ -54,12 +54,15 @@ export default function Orientacion({ inicial, seccion, programasDestacados }: {
   const titulo = inicial ? datos.titulo : programasDestacados ? "Programas y Procedimientos" : esCert ? "Requisitos de Certificación" : "Requisitos y Procedimiento";
   const [programas, setProgramas] = useState<Resultado<Programa[]>>();
   const [programa, setPrograma] = useState("");
+  const [busquedaPrograma, setBusquedaPrograma] = useState("");
   const [catalogo, setCatalogo] = useState<Resultado<Catalogo>>();
   const [busqueda, setBusqueda] = useState("");
   const programasVisibles = programas?.clave === datos.programa ? programas : undefined;
   const opciones = programasVisibles?.datos;
-  const programaActual = opciones?.some((item) => String(item.id) === programa) ? programa
-    : opciones?.length === 1 ? String(opciones[0].id) : "";
+  const consultaPrograma = normalizarBusqueda(busquedaPrograma.trim());
+  const programasFiltrados = opciones?.filter(({ nombre }) => normalizarBusqueda(nombre).includes(consultaPrograma));
+  const programaActual = programasFiltrados?.some((item) => String(item.id) === programa) ? programa
+    : programasFiltrados?.length === 1 ? String(programasFiltrados[0].id) : "";
   const clave = programaActual ? `${datos.tipo}/${programaActual}` : "";
 
   useEffect(() => {
@@ -137,6 +140,7 @@ export default function Orientacion({ inicial, seccion, programasDestacados }: {
                 if (esTramite(valor) || esCertificacion(valor)) setSeleccion(valor);
                 setPrograma("");
                 setBusqueda("");
+                setBusquedaPrograma("");
               }}>
                 {Object.entries(opcionesTramite).map(([id, item]) => <option key={id} value={id}>{item.nombre}</option>)}
               </select>
@@ -144,12 +148,19 @@ export default function Orientacion({ inicial, seccion, programasDestacados }: {
           )}
           <label>Programa académico
             <select value={programaActual} onChange={(evento) => { setPrograma(evento.target.value); setBusqueda(""); }}
-              disabled={!opciones?.length}>
+              disabled={!programasFiltrados?.length}>
               {opciones?.length !== 1 && <option value="">Selecciona un programa</option>}
-              {opciones?.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+              {programasFiltrados?.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
             </select>
           </label>
         </div>
+        {esCert && <label className={styles.buscador}>Buscar programa
+          <span><Icono ruta="M21 21l-5-5m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
+            <input type="search" value={busquedaPrograma} placeholder="Nombre del programa" disabled={!opciones?.length}
+              onChange={(evento) => { setBusquedaPrograma(evento.target.value); setPrograma(""); setBusqueda(""); }} />
+          </span>
+        </label>}
+        {esCert && opciones?.length && programasFiltrados?.length === 0 && <p role="status">No hay programas para esta búsqueda.</p>}
         <div role="status">
           {informacion?.demostracion && <p className={styles.avisoDemo}><strong>Programa de demostración.</strong> Los requisitos y documentos son ejemplos para pruebas locales.</p>}
           {!programasVisibles && <p>Consultando programas…</p>}
