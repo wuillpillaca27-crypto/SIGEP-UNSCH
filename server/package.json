@@ -11,6 +11,7 @@
     "db:generate": "prisma generate",
     "db:seed:load": "node scripts/sembrar-carga.js",
     "db:seed:demo": "node scripts/sembrar-demo.js",
+    "db:seed:grados-dev": "node scripts/sembrar-grados-dev.js",
     "test": "jest --coverage",
     "test:e2e": "node scripts/verificar-integral.cjs"
   },
